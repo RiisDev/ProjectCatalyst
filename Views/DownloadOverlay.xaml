@@ -1,0 +1,76 @@
+<UserControl x:Class="ProjectCatalyst.Views.DownloadOverlay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="1080" d:DesignWidth="1920"
+             Focusable="False"
+             IsHitTestVisible="True">
+
+	<Grid>
+		<Border x:Name="Backdrop" Background="#CC05070D" Opacity="0" />
+
+        <Border x:Name="Card"
+                Background="{StaticResource PanelBrush}"
+                BorderBrush="{StaticResource PanelBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="20"
+                Width="620"
+                Padding="44,38"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Opacity="0"
+                RenderTransformOrigin="0.5,0.5">
+            <Border.Effect>
+                <DropShadowEffect Color="Black" Direction="270" ShadowDepth="10" BlurRadius="40" Opacity="0.5" />
+            </Border.Effect>
+            <Border.RenderTransform>
+                <ScaleTransform x:Name="CardScale" ScaleX="0.94" ScaleY="0.94" />
+            </Border.RenderTransform>
+
+            <StackPanel>
+                <TextBlock x:Name="StepText"
+                           Text="DOWNLOADING"
+                           Style="{StaticResource HintText}" />
+
+                <TextBlock x:Name="TitleTextBlock"
+                           Text="Installing"
+                           Style="{StaticResource TitleText}"
+                           FontSize="30"
+                           Margin="0,6,0,18" />
+
+                <TextBlock x:Name="FileNameText"
+                           Text="filename.pkg"
+                           Style="{StaticResource SubtitleText}"
+                           TextTrimming="CharacterEllipsis"
+                           Margin="0,0,0,22" />
+
+                <Border CornerRadius="5"
+                        Height="10"
+                        Background="{StaticResource PanelBorderBrush}"
+                        ClipToBounds="True">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition x:Name="FillColumn" Width="0*" />
+                            <ColumnDefinition x:Name="RemainderColumn" Width="1*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Background="{StaticResource AccentBrush}" />
+                    </Grid>
+                </Border>
+
+                <Grid Margin="0,14,0,0">
+                    <TextBlock x:Name="StatusText"
+                               Text="Preparing…"
+                               Style="{StaticResource SubtitleText}"
+                               HorizontalAlignment="Left" />
+                    <TextBlock x:Name="PercentText"
+                               Text="0%"
+                               Style="{StaticResource SubtitleText}"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               HorizontalAlignment="Right" />
+                </Grid>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>
