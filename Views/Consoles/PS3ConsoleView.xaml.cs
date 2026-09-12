@@ -252,12 +252,28 @@ namespace ProjectCatalyst.Views.Consoles
 			ItemsListTransform.BeginAnimation(TranslateTransform.YProperty, animation);
 		}
 		
-		public void MoveHorizontal(int delta) => SelectCategory(_categoryIndex + delta);
+		public void MoveHorizontal(int delta)
+		{
+			if (ScreenshotViewer.IsOpen)
+			{
+				ScreenshotViewer.MoveHorizontal(delta);
+				return;
+			}
 
-		public void MoveVertical(int delta) => SelectItem(_itemIndex + delta);
+			SelectCategory(_categoryIndex + delta);
+		}
+
+		public void MoveVertical(int delta)
+		{
+			if (ScreenshotViewer.IsOpen) return; // nothing to browse vertically in the photo viewer
+
+			SelectItem(_itemIndex + delta);
+		}
 
 		public void ActivateSelected()
 		{
+			if (ScreenshotViewer.IsOpen) return; // nothing to activate while viewing a photo
+
 			XmbItem currentItem = CurrentItems.First(x => x.IsSelected);
 			if (DataContext is not MainWindow mainWindow) return;
 
@@ -333,10 +349,34 @@ namespace ProjectCatalyst.Views.Consoles
 							_ = result;
 						}
 					}
+					// Pictures Category
+					else if (_categoryIndex == 2)
+					{
+						List<XmbItem> picturesWithImages = CurrentItems.Where(i => !string.IsNullOrEmpty(i.CoverImagePath)).ToList();
+						List<string> imagePaths = picturesWithImages.Select(i => i.CoverImagePath!).ToList();
+						int startIndex = picturesWithImages.IndexOf(currentItem);
+
+						if (imagePaths.Count > 0 && startIndex >= 0)
+						{
+							ScreenshotViewer.Show(imagePaths, startIndex);
+						}
+					}
 
 					FocusDefault();
 				});
 			});
+		}
+
+		/// <summary>Lets the screenshot viewer consume Back/B/Escape itself (closing the photo) instead of the default return-to-launcher.</summary>
+		public bool TryHandleBack()
+		{
+			if (ScreenshotViewer.IsOpen)
+			{
+				ScreenshotViewer.Close();
+				return true;
+			}
+
+			return false;
 		}
 
 		public void FocusDefault()
@@ -495,7 +535,10 @@ namespace ProjectCatalyst.Views.Consoles
 					break;
 
 				case Key.Escape:
-					BackRequested?.Invoke(this, EventArgs.Empty);
+					if (!TryHandleBack())
+					{
+						BackRequested?.Invoke(this, EventArgs.Empty);
+					}
 					e.Handled = true;
 					break;
 			}

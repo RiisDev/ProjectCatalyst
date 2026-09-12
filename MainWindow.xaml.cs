@@ -359,7 +359,10 @@ namespace ProjectCatalyst
 						_activeConsoleView.ActivateSelected();
 						break;
 					case GamepadButton.Back:
-						ReturnToLauncher();
+						if (!_activeConsoleView.TryHandleBack())
+						{
+							ReturnToLauncher();
+						}
 						break;
 				}
 				return;

@@ -4,6 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:internals="clr-namespace:ProjectCatalyst.Views.Consoles.Internals"
+             xmlns:views="clr-namespace:ProjectCatalyst.Views"
              mc:Ignorable="d"
              d:DesignHeight="1080" d:DesignWidth="1920"
              Focusable="True">
@@ -103,43 +104,39 @@
 		<Border Grid.Row="0" Grid.RowSpan="5" Background="#22140A2E" />
 
 		<Border Grid.Row="0"
-                HorizontalAlignment="Left"
+                HorizontalAlignment="Right"
                 VerticalAlignment="Top"
-                Margin="50,36,0,0"
-                Background="#26FFFFFF"
-                CornerRadius="20"
-                Padding="22,10">
-			<StackPanel Orientation="Horizontal">
-				<Ellipse Width="10" Height="10" Fill="#3ECBFF" VerticalAlignment="Center" Margin="0,0,10,0" />
+                Margin="0,36,0,0"
+                Width="480"
+                Height="44"
+                Background="#33707070"
+                BorderBrush="#40FFFFFF"
+                BorderThickness="1,1,0,1"
+                CornerRadius="4,0,0,4"
+                Padding="20,0">
+			<Grid>
 				<TextBlock x:Name="CurrentUserText"
                            Text="Guest"
                            Foreground="White"
                            FontFamily="Segoe UI Light, Segoe UI"
-                           FontSize="16"
+                           FontSize="15"
+                           HorizontalAlignment="Left"
                            VerticalAlignment="Center" />
-			</StackPanel>
-		</Border>
 
-		<Border Grid.Row="0"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Top"
-                Margin="0,36,50,0"
-                Background="#26FFFFFF"
-                CornerRadius="20"
-                Padding="22,10">
-			<StackPanel Orientation="Horizontal">
-				<TextBlock x:Name="DateText"
-                           Foreground="White"
-                           FontFamily="Segoe UI Light, Segoe UI"
-                           FontSize="16"
-                           VerticalAlignment="Center"
-                           Margin="0,0,18,0" />
-				<TextBlock x:Name="ClockText"
-                           Foreground="White"
-                           FontFamily="Segoe UI Light, Segoe UI"
-                           FontSize="16"
-                           VerticalAlignment="Center" />
-			</StackPanel>
+				<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+					<TextBlock x:Name="DateText"
+                               Foreground="White"
+                               FontFamily="Segoe UI Light, Segoe UI"
+                               FontSize="15"
+                               VerticalAlignment="Center"
+                               Margin="0,0,14,0" />
+					<TextBlock x:Name="ClockText"
+                               Foreground="White"
+                               FontFamily="Segoe UI Light, Segoe UI"
+                               FontSize="15"
+                               VerticalAlignment="Center" />
+				</StackPanel>
+			</Grid>
 		</Border>
 
 		<ItemsControl x:Name="CategoryList" Grid.Row="2" HorizontalAlignment="Center">
@@ -360,5 +357,7 @@
                 <Run Text="Esc / B  Back to Catalyst" />
 			</TextBlock>
 		</StackPanel>
+
+		<views:ScreenshotViewerOverlay x:Name="ScreenshotViewer" Grid.RowSpan="5" />
 	</Grid>
 </UserControl>
