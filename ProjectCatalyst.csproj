@@ -28,10 +28,4 @@
     </None>
   </ItemGroup>
 
-  <ItemGroup>
-    <Page Update="Views\Consoles\Ps3\PS3ConsoleView.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-  </ItemGroup>
-
 </Project>
