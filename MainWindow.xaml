@@ -88,11 +88,6 @@
 
         <ContentControl x:Name="ConsoleHost" Focusable="False" Visibility="Collapsed" />
 
-        <views:SettingsOverlay x:Name="Settings"
-                                Visibility="Collapsed"
-                                RequestClose="OnSettingsRequestClose"
-                                RequestExitApp="OnSettingsRequestExitApp" />
-
         <views:DownloadOverlay x:Name="DownloadOverlayControl" />
 
         <views:EmulatorSetupOverlay x:Name="EmulatorSetupControl" />

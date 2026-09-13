@@ -2,6 +2,7 @@ global using static ProjectCatalyst.Logging;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
 
@@ -9,10 +10,15 @@ namespace ProjectCatalyst
 {
 	public partial class App
 	{
+		[DllImport("kernel32.dll")]
+		private static extern bool AllocConsole();
+
 		// Disabled Explicit since we send the source info manually
 		// ReSharper disable twice ExplicitCallerInfoArgument
 		protected override void OnStartup(StartupEventArgs e)
 		{
+			AllocConsole();
+
 			PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Critical;
 			
 			AppDomain.CurrentDomain.ProcessExit += (_, _) => LogInfo("Application process is exiting.");

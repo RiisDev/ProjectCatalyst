@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -8,7 +7,6 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using ProjectCatalyst.Models;
 using ProjectCatalyst.Services;
-using ProjectCatalyst.Views;
 using ProjectCatalyst.Views.Consoles;
 using ProjectCatalyst.Views.Consoles.Internals;
 
@@ -138,11 +136,6 @@ namespace ProjectCatalyst
 
 			switch (e.Key)
 			{
-				case Key.S:
-					OpenSettings();
-					e.Handled = true;
-					break;
-
 				case Key.Escape:
 					Application.Current.Shutdown();
 					break;
@@ -156,15 +149,8 @@ namespace ProjectCatalyst
 			{
 				if (PlatformSelector.SelectedItem is not PlatformItem item) return;
 
-				LogInfo($"{item.Name} -> IsSettingsTile = {item.IsSettingsTile}");
 				LogInfo($"{item.Name} -> IsAddEmulatorTile = {item.IsAddEmulatorTile}");
 				LogInfo($"{item.Name} -> ConsoleViewFactory is null = {item.ConsoleViewFactory is null}");
-
-				if (item.IsSettingsTile)
-				{
-					OpenSettings();
-					return;
-				}
 
 				if (item.IsAddEmulatorTile)
 				{
@@ -192,23 +178,6 @@ namespace ProjectCatalyst
 			}
 		}
 
-		private void OpenSettings()
-		{
-			LogInfo("Opening settings");
-			_isSettingsOpen = true;
-			Settings.Visibility = Visibility.Visible;
-			Settings.Open();
-		}
-
-		private void OnSettingsRequestClose(object? sender, EventArgs e)
-		{
-			LogInfo("Closing settings");
-			_isSettingsOpen = false;
-			Settings.Close();
-			PlatformSelector.Focus();
-			Keyboard.Focus(PlatformSelector);
-		}
-		
 		private async Task OpenEmulatorSetupAsync()
 		{
 			LogInfo("Launching emulator setup");
@@ -347,18 +316,7 @@ namespace ProjectCatalyst
 
 					return;
 				}
-
-				if (_isSettingsOpen)
-				{
-					if (button is GamepadButton.Back)
-					{
-						_activeConsoleView?.PlayDirectionalAudio(default, button);
-						OnSettingsRequestClose(this, EventArgs.Empty);
-					}
-
-					return;
-				}
-
+				
 				if (_isConsoleViewOpen && _activeConsoleView is not null)
 				{
 					_activeConsoleView.PlayDirectionalAudio(default, button);
@@ -402,9 +360,6 @@ namespace ProjectCatalyst
 						break;
 					case GamepadButton.Accept:
 						_ = LaunchSelectedAsync();
-						break;
-					case GamepadButton.Start:
-						OpenSettings();
 						break;
 				}
 			}
