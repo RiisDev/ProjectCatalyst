@@ -1,7 +1,3 @@
-using ProjectCatalyst.Models;
-using ProjectCatalyst.Services;
-using ProjectCatalyst.Views.Consoles.Internals;
-using ProjectCatalyst.Wrappers;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -10,8 +6,12 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
+using ProjectCatalyst.Models;
+using ProjectCatalyst.Services;
+using ProjectCatalyst.Views.Consoles.Internals;
+using ProjectCatalyst.Wrappers;
 
-namespace ProjectCatalyst.Views.Consoles
+namespace ProjectCatalyst.Views.Consoles.Ps3
 {
 	public partial class Ps3ConsoleView : IConsoleView
 	{
@@ -19,6 +19,8 @@ namespace ProjectCatalyst.Views.Consoles
 		private const double FocusOffsetFromTop = 24;
 
 		private int _currentSelectedUserId = 1;
+
+		private readonly MainWindow _mainWindow;
 
 		private readonly EmulatorConfig _emulatorConfig;
 		private readonly List<XmbCategory> _categories;
@@ -31,13 +33,16 @@ namespace ProjectCatalyst.Views.Consoles
 		public ObservableCollection<XmbItem> CurrentItems { get; } = [];
 
 		public event EventHandler? BackRequested;
-		private readonly RPCS3 _rpcs3;
-		public Ps3ConsoleView(EmulatorConfig config)
+		public readonly RPCS3 RPCS3;
+
+		public Ps3ConsoleView(EmulatorConfig config, MainWindow main)
 		{
 			_emulatorConfig = config;
 
+			_mainWindow = main;
+
 			Log($"Starting RPCS3 wrapper with: {_emulatorConfig.ExecutablePath}");
-			_rpcs3 = new RPCS3(Path.GetDirectoryName(_emulatorConfig.ExecutablePath)!);
+			RPCS3 = new RPCS3(Path.GetDirectoryName(_emulatorConfig.ExecutablePath)!);
 
 			Log("Building interface");
 			InitializeComponent();
@@ -97,7 +102,7 @@ namespace ProjectCatalyst.Views.Consoles
 		
 		public string GetResource(string category, string name)
 		{
-			string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "ps3", category, name);
+			string path = Path.Combine(BaseDirectory, "Resources", "ps3", category, name);
 			LogInfo($"Grabbing resource: {path}");
 			return path;
 		}
@@ -126,7 +131,7 @@ namespace ProjectCatalyst.Views.Consoles
 							{ Name = "Pictures", IconPath = GetResource("Icons", "images.png") };
 						XmbCategory settingsCategory = new()
 							{ Name = "Settings", IconPath = GetResource("Icons", "settings.png") };
-						foreach (RPCS3.Ps3User user in _rpcs3.GetPlayers())
+						foreach (RPCS3.Ps3User user in RPCS3.GetPlayers())
 						{
 							userCategory.Items.Add(new XmbItem
 							{
@@ -139,7 +144,7 @@ namespace ProjectCatalyst.Views.Consoles
 						}
 
 						userCategory.Items.Add(new XmbItem { Name = "Add User", CoverImagePath = GetResource("Icons", "add.png"), Subtitle = "SYS" });
-						foreach (RPCS3.Ps3Game game in _rpcs3.GetAllGames(_emulatorConfig.GamesDirectory))
+						foreach (RPCS3.Ps3Game game in RPCS3.GetAllGames(_emulatorConfig.GamesDirectory))
 						{
 							gamesCategory.Items.Add(new XmbItem
 							{
@@ -151,7 +156,7 @@ namespace ProjectCatalyst.Views.Consoles
 							});
 						}
 
-						foreach (string imagePath in _rpcs3.GetScreenshots())
+						foreach (string imagePath in RPCS3.GetScreenshots())
 						{
 							screenshotsCategory.Items.Add(new XmbItem
 							{
@@ -291,114 +296,174 @@ namespace ProjectCatalyst.Views.Consoles
 			SelectItem(_itemIndex + delta);
 		}
 
-		public void ActivateSelected()
+		public void ReloadCategories()
 		{
-			Log("Activating selection");
-			if (ScreenshotViewer.IsOpen) return; // nothing to activate while viewing a photo
+			List<XmbCategory> categoryData = BuildCategories();
 
-			XmbItem currentItem = CurrentItems.First(x => x.IsSelected);
-			if (DataContext is not MainWindow mainWindow) return;
-
-			Task.Run( () =>
+			foreach (XmbCategory category in _categories)
 			{
-				Dispatcher.Invoke(async() =>
-				{
-					if (CurrentItems.Count == 0) return;
+				category.Items.Clear();
+				category.Items.AddRange(categoryData.First(x => x.Name == category.Name).Items);
+			}
 
-					// Users Category
-					if (_categoryIndex == 0)
-					{
-						if (currentItem.Subtitle == "SYS")
-						{
-							// Create User
-						}
-						else if (!int.TryParse(currentItem.Subtitle, out _currentSelectedUserId))
-						{
-							CatalystMessageBoxResult result = await mainWindow.CatalystMessageBoxControl.ShowAsync("ERROR", "Failed to parse user_id, please contact support.", icon: CatalystMessageBoxIcon.Error);
-							_ = result;
-						}
-						else UpdateActiveUserIndicator();
-					}
-					// Game Category
-					else if (_categoryIndex == 1) 
-					{
-						try
-						{
-							(bool valid, RPCS3.RPS3FailedReason reason) = _rpcs3.ValidateInstall();
-							if (!valid)
-							{
-								LogError(reason.ToString());
-								CatalystMessageBoxResult result = await mainWindow.CatalystMessageBoxControl.ShowAsync("ERROR", $"Failed to validate install: {reason}", icon: CatalystMessageBoxIcon.Error);
-								_ = result;
-								return;
-							}
-
-							if (!_rpcs3.IsFirmwareInstalled())
-							{
-								LogError("Missing required firmware");
-								CatalystMessageBoxResult result = await mainWindow.CatalystMessageBoxControl.ShowAsync("ERROR", $"RPCS does not have any valid firmware installed, please go to the settings tab.", icon: CatalystMessageBoxIcon.Error);
-								_ = result;
-								return;
-							}
-
-							_ = Task.Run(async () =>
-							{
-								Task launchTask = _rpcs3.LaunchGameAsUser(_rpcs3.GetAllGames().First(x => x.MetData.TitleId == currentItem.Subtitle), _currentSelectedUserId);
-
-								await Task.Delay(2000);
-
-								await Dispatcher.InvokeAsync(() =>
-								{
-									StopBackgroundAudio();
-									StopBackgroundVideo();
-									mainWindow.Hide();
-								});
-
-
-								await Task.WhenAny(WaitForExitConnection(), launchTask);
-
-								await Dispatcher.InvokeAsync(() =>
-								{
-									StartBackgroundAudio();
-									StartBackgroundVideo();
-									mainWindow.Show();
-									FocusDefault();
-								});
-							});
-							
-						}
-						catch (Exception ex)
-						{
-							CatalystMessageBoxResult result = await mainWindow.CatalystMessageBoxControl.ShowAsync("ERROR", ex.ToString(), icon: CatalystMessageBoxIcon.Error);
-							_ = result;
-						}
-					}
-					// Pictures Category
-					else if (_categoryIndex == 2)
-					{
-						List<XmbItem> picturesWithImages = CurrentItems.Where(i => !string.IsNullOrEmpty(i.CoverImagePath)).ToList();
-						List<string> imagePaths = picturesWithImages.Select(i => i.CoverImagePath!).ToList();
-						int startIndex = picturesWithImages.IndexOf(currentItem);
-
-						if (imagePaths.Count > 0 && startIndex >= 0)
-						{
-							ScreenshotViewer.Show(imagePaths, startIndex);
-						}
-					}
-					else if (_categoryIndex == 3)
-					{
-						if (_itemIndex == 2)
-						{
-							await FirmwareInstaller.ShowAsync();
-						}
-					}
-
-					FocusDefault();
-				});
-			});
+			RefreshItemsForCurrentCategory();
 		}
 
-		/// <summary>Lets the screenshot viewer consume Back/B/Escape itself (closing the photo) instead of the default return-to-launcher.</summary>
+		private enum XmbCategoryState
+		{
+			Users = 0,
+			Games = 1,
+			Pictures = 2,
+			System = 3
+		}
+
+		private enum XmbSubCategoryState
+		{
+			ChangeVideo = 0,
+			ReloadData = 1,
+			InstallFirmware = 2
+		}
+
+		public async void ActivateSelected()
+		{
+			Log("Activating selection");
+			if (ScreenshotViewer.IsOpen) return;
+			if (_mainWindow.CatalystMessageBoxControl.IsOpen) return;
+			if (CurrentItems.Count == 0) return;
+
+			XmbItem? currentItem = CurrentItems.FirstOrDefault(x => x.IsSelected);
+			if (currentItem is null) return;
+
+			switch ((XmbCategoryState)_categoryIndex)
+			{
+				case XmbCategoryState.Users:
+					await ActivateUserAsync(currentItem);
+					break;
+				case XmbCategoryState.Games:
+					await ActivateGameAsync(currentItem);
+					break;
+				case XmbCategoryState.Pictures:
+					ActivatePicture(currentItem);
+					break;
+				case XmbCategoryState.System:
+					await ActivateSystemItemAsync();
+					break;
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+
+			FocusDefault();
+		}
+
+		private async Task ActivateUserAsync(XmbItem currentItem)
+		{
+			if (currentItem.Subtitle == "SYS") await CreateUserOverlay.ShowAsync();
+			else if (!int.TryParse(currentItem.Subtitle, out _currentSelectedUserId))
+			{
+				CatalystMessageBoxResult result = await _mainWindow.CatalystMessageBoxControl.ShowAsync("ERROR", "Failed to parse user_id, please contact support.", icon: CatalystMessageBoxIcon.Error);
+				_ = result;
+			}
+			else UpdateActiveUserIndicator();
+		}
+
+		private async Task ActivateGameAsync(XmbItem currentItem)
+		{
+			try
+			{
+				(bool valid, RPCS3.RPS3FailedReason reason) = RPCS3.ValidateInstall();
+				if (!valid)
+				{
+					LogError(reason.ToString());
+					await _mainWindow.CatalystMessageBoxControl.ShowAsync(
+						"ERROR", $"Failed to validate install: {reason}", icon: CatalystMessageBoxIcon.Error);
+					return;
+				}
+
+				if (!RPCS3.IsFirmwareInstalled())
+				{
+					LogError("Missing required firmware");
+					await _mainWindow.CatalystMessageBoxControl.ShowAsync(
+						"ERROR", "RPCS3 does not have any valid firmware installed, please go to the settings tab.",
+						icon: CatalystMessageBoxIcon.Error);
+					return;
+				}
+
+				_ = LaunchGameAndWaitAsync(currentItem);
+			}
+			catch (Exception ex)
+			{
+				await _mainWindow.CatalystMessageBoxControl.ShowAsync("ERROR", ex.ToString(), icon: CatalystMessageBoxIcon.Error);
+			}
+		}
+
+		private async Task LaunchGameAndWaitAsync(XmbItem currentItem)
+		{
+			Task launchTask = RPCS3.LaunchGameAsUser(
+				RPCS3.GetAllGames().First(x => x.MetData.TitleId == currentItem.Subtitle),
+				_currentSelectedUserId);
+
+			await Task.Delay(2000);
+
+			StopBackgroundAudio();
+			StopBackgroundVideo();
+			_mainWindow.Hide();
+
+			await Task.WhenAny(WaitForExitConnection(), launchTask);
+
+			StartBackgroundAudio();
+			StartBackgroundVideo();
+			_mainWindow.Show();
+			FocusDefault();
+		}
+
+		private async Task ActivateSystemItemAsync()
+		{
+			switch ((XmbSubCategoryState)_itemIndex)
+			{
+				case XmbSubCategoryState.ChangeVideo: break;
+				case XmbSubCategoryState.ReloadData:
+					ReloadCategories();
+					break;
+				case XmbSubCategoryState.InstallFirmware:
+					CatalystMessageBoxResult confirm = await _mainWindow.CatalystMessageBoxControl.ShowAsync("Install Firmware", "Installing a firmware requires keyboard input, do you wish to proceed.", icon: CatalystMessageBoxIcon.Question, buttons: CatalystMessageBoxButtons.YesNo);
+					if (confirm != CatalystMessageBoxResult.Yes) return;
+
+					string? firmwareLocation = await FirmwareInstaller.ShowAsync();
+					if (!File.Exists(firmwareLocation)) return;
+
+					confirm = await _mainWindow.CatalystMessageBoxControl.ShowAsync("Install Firmware", $"Install firmware from {Path.GetFileName(firmwareLocation)}?", icon: CatalystMessageBoxIcon.Question, buttons: CatalystMessageBoxButtons.YesNo);
+					if (confirm != CatalystMessageBoxResult.Yes) return;
+
+					DownloadOverlay.Open();
+					await Task.Delay(500);
+					DownloadOverlay.UpdateProgress(Path.GetFileName(firmwareLocation), .5);
+
+					if (RPCS3.IsFirmwareInstalled())
+					{
+						confirm = await _mainWindow.CatalystMessageBoxControl.ShowAsync("Install Firmware", $"RPCS3 has detected an existing firmware, do you wish to proceed?", icon: CatalystMessageBoxIcon.Question, buttons: CatalystMessageBoxButtons.YesNo);
+
+						if (confirm == CatalystMessageBoxResult.Yes)
+							await RPCS3.InstallFirmwareAsync(firmwareLocation, true);
+					}
+
+					DownloadOverlay.UpdateProgress(Path.GetFileName(firmwareLocation), 1.0, status: "Complete");
+					await Task.Delay(500);
+					DownloadOverlay.Close();
+					break;
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+		}
+
+		private void ActivatePicture(XmbItem currentItem)
+		{
+			List<XmbItem> picturesWithImages = CurrentItems.Where(i => !string.IsNullOrEmpty(i.CoverImagePath)).ToList();
+			int startIndex = picturesWithImages.IndexOf(currentItem);
+			if (startIndex < 0) return;
+
+			ScreenshotViewer.Show(picturesWithImages.Select(i => i.CoverImagePath!).ToList(), startIndex);
+		}
+
 		public bool TryHandleBack()
 		{
 			if (ScreenshotViewer.IsOpen)
@@ -406,6 +471,25 @@ namespace ProjectCatalyst.Views.Consoles
 				ScreenshotViewer.Close();
 				return true;
 			}
+
+			if (FirmwareInstaller.IsOpen)
+			{
+				FirmwareInstaller.Close();
+				return true;
+			}
+
+			if (CreateUserOverlay.IsOpen)
+			{
+				CreateUserOverlay.Close();
+				return true;
+			}
+
+			if (_mainWindow.CatalystMessageBoxControl.IsOpen)
+			{
+				_mainWindow.CatalystMessageBoxControl.RequestCancel();
+				return true;
+			}
+
 
 			return false;
 		}
@@ -445,7 +529,7 @@ namespace ProjectCatalyst.Views.Consoles
 					return;
 				}
 
-				string videoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "ps3", "Backgrounds", fileName);
+				string videoPath = Path.Combine(BaseDirectory, "Resources", "ps3", "Backgrounds", fileName);
 				
 				BackgroundVideo.Source = new Uri(videoPath, UriKind.Absolute);
 				BackgroundVideo.Play();
@@ -478,7 +562,7 @@ namespace ProjectCatalyst.Views.Consoles
 		{
 			try
 			{
-				string audioPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "ps3", "Sounds", AudioFileName);
+				string audioPath = Path.Combine(BaseDirectory, "Resources", "ps3", "Sounds", AudioFileName);
 
 				if (!File.Exists(audioPath))
 				{
@@ -589,7 +673,7 @@ namespace ProjectCatalyst.Views.Consoles
 			{
 				try
 				{
-					string text = await _rpcs3.ReadLogTextAsync(path);
+					string text = await RPCS3.ReadLogTextAsync(path);
 					if (text.Contains("SYS: Requesting game to exit") ) { break; }
 				}
 				catch { /**/ }

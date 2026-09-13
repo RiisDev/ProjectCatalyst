@@ -7,8 +7,8 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using ProjectCatalyst.Models;
 using ProjectCatalyst.Services;
-using ProjectCatalyst.Views.Consoles;
 using ProjectCatalyst.Views.Consoles.Internals;
+using ProjectCatalyst.Views.Consoles.Ps3;
 
 namespace ProjectCatalyst
 {
@@ -18,9 +18,9 @@ namespace ProjectCatalyst
 
 		private readonly GamepadService _gamepad = new();
 		private readonly DispatcherTimer _clockTimer;
-		private bool _isSettingsOpen;
+
 		private bool _isConsoleViewOpen;
-		private IConsoleView? _activeConsoleView;
+		public IConsoleView? ActiveConsoleView;
 
 		public MainWindow()
 		{
@@ -59,13 +59,13 @@ namespace ProjectCatalyst
 			});
 		}
 
-		private static PlatformItem BuildPlatformItem(EmulatorConfig config)
+		private PlatformItem BuildPlatformItem(EmulatorConfig config)
 		{
 			(string displayName, string glyph, Color accentColor, Func<UserControl>? consoleViewFactory) = config.SystemType switch
 			{
 				SystemType.Ps3 => ("PlayStation 3", "PS3",
 					(Color)ColorConverter.ConvertFromString("#4A90D9"),
-					(Func<UserControl>?)(() => new Ps3ConsoleView(config))),
+					(Func<UserControl>?)(() => new Ps3ConsoleView(config, this))),
 
 				SystemType.Ps4 => ("PlayStation 4", "PS4",
 					(Color)ColorConverter.ConvertFromString("#00C2FF"), null),
@@ -131,7 +131,10 @@ namespace ProjectCatalyst
 
 		private void OnWindowKeyDown(object sender, KeyEventArgs e)
 		{
-			if (_isSettingsOpen || CatalystMessageBoxControl.IsOpen || EmulatorSetupControl.IsOpen)
+			if (CatalystMessageBoxControl.IsOpen || EmulatorSetupControl.IsOpen )
+				return;
+
+			if (ActiveConsoleView?.TryHandleBack() ?? false)
 				return;
 
 			switch (e.Key)
@@ -221,7 +224,7 @@ namespace ProjectCatalyst
 
 				if (view is not IConsoleView consoleView) return;
 
-				_activeConsoleView = consoleView;
+				ActiveConsoleView = consoleView;
 				consoleView.BackRequested += OnConsoleViewBackRequested;
 				consoleView.FocusDefault();
 			}
@@ -236,10 +239,10 @@ namespace ProjectCatalyst
 		private void ReturnToLauncher()
 		{
 			Log("Returning to main menu");
-			if (_activeConsoleView is not null)
+			if (ActiveConsoleView is not null)
 			{
-				_activeConsoleView.BackRequested -= OnConsoleViewBackRequested;
-				_activeConsoleView = null;
+				ActiveConsoleView.BackRequested -= OnConsoleViewBackRequested;
+				ActiveConsoleView = null;
 			}
 
 			ConsoleHost.Visibility = Visibility.Collapsed;
@@ -297,7 +300,7 @@ namespace ProjectCatalyst
 
 				if (CatalystMessageBoxControl.IsOpen)
 				{
-					_activeConsoleView?.PlayDirectionalAudio(default, button);
+					ActiveConsoleView?.PlayDirectionalAudio(default, button);
 					switch (button)
 					{
 						case GamepadButton.DPadLeft:
@@ -317,29 +320,29 @@ namespace ProjectCatalyst
 					return;
 				}
 				
-				if (_isConsoleViewOpen && _activeConsoleView is not null)
+				if (_isConsoleViewOpen && ActiveConsoleView is not null)
 				{
-					_activeConsoleView.PlayDirectionalAudio(default, button);
+					ActiveConsoleView.PlayDirectionalAudio(default, button);
 
 					switch (button)
 					{
 						case GamepadButton.DPadLeft:
-							_activeConsoleView.MoveHorizontal(-1);
+							ActiveConsoleView.MoveHorizontal(-1);
 							break;
 						case GamepadButton.DPadRight:
-							_activeConsoleView.MoveHorizontal(1);
+							ActiveConsoleView.MoveHorizontal(1);
 							break;
 						case GamepadButton.DPadUp:
-							_activeConsoleView.MoveVertical(-1);
+							ActiveConsoleView.MoveVertical(-1);
 							break;
 						case GamepadButton.DPadDown:
-							_activeConsoleView.MoveVertical(1);
+							ActiveConsoleView.MoveVertical(1);
 							break;
 						case GamepadButton.Accept:
-							_activeConsoleView.ActivateSelected();
+							ActiveConsoleView.ActivateSelected();
 							break;
 						case GamepadButton.Back:
-							if (!_activeConsoleView.TryHandleBack())
+							if (!ActiveConsoleView.TryHandleBack())
 							{
 								ReturnToLauncher();
 							}

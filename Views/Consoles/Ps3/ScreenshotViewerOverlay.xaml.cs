@@ -7,7 +7,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
-namespace ProjectCatalyst.Views
+namespace ProjectCatalyst.Views.Consoles.Ps3
 {
 	public partial class ScreenshotViewerOverlay : UserControl
 	{

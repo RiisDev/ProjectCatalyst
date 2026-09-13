@@ -39,8 +39,10 @@ namespace ProjectCatalyst
 
 	public static class Logging
 	{
+		public static readonly string BaseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+
 		private static readonly Lock LogLock = new();
-		private static readonly string LogPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "log.txt");
+		private static readonly string LogPath = Path.Combine(BaseDirectory, "Resources", "log.txt");
 		private static readonly StreamWriter Writer = new(new FileStream(LogPath, FileMode.Append, FileAccess.Write, FileShare.Read), Encoding.UTF8) { AutoFlush = true };
 
 		private static void Log(string message, string type, string caller, string filePath)

@@ -1,9 +1,10 @@
 ﻿using ProjectCatalyst.Util;
 using System.IO;
+using System.Net.NetworkInformation;
 
 namespace ProjectCatalyst.Wrappers
 {
-	internal class RPCS3(string path)
+	public class RPCS3(string path)
 	{
 		public record Ps3Game(Ps3GameMetadata MetData, string IconLocation, string InstallLocation);
 		public record Ps3User(int UserId, string Username);
@@ -20,12 +21,20 @@ namespace ProjectCatalyst.Wrappers
 		private static readonly string[] RequiredDirectories = ["dev_bdvd", "dev_flash", "dev_flash2", "dev_flash3", "dev_hdd0", "dev_hdd1", "dev_usb000"];
 		private static readonly string[] RequiredFirmwareDirectories = ["ps2emu", "ps1emu", "pspemu", "bdplayer", "data", "sys", "vsh"];
 
+		public readonly string Executable = Path.Combine(path, "rpcs3.exe");
+		public readonly string DevFlash = Path.Combine(path, "dev_flash");
+		public readonly string DevHdd = Path.Combine(path, "dev_hdd0");
+		public readonly string DevHome = Path.Combine(path, "dev_hdd0", "home");
+		public readonly string Captures = Path.Combine(path, "captures");
+		public readonly string GameIcons = Path.Combine(path, "Icons", "ProjectCatalyst");
+		public readonly string Games = Path.Combine(path, "games");
+
 		public (bool, RPS3FailedReason) ValidateInstall()
 		{
 			try
 			{
 
-				if (!File.Exists(Path.Combine(path, "rpcs3.exe")))
+				if (!File.Exists(Executable))
 					return (false, RPS3FailedReason.MissingExecutable);
 
 				if (RequiredFirstLaunchDirectories.Any(directory => !Directory.Exists(Path.Combine(path, directory))))
@@ -43,7 +52,7 @@ namespace ProjectCatalyst.Wrappers
 			}
 		}
 
-		public bool IsFirmwareInstalled() => RequiredFirmwareDirectories.All(x => Directory.Exists(Path.Combine(path, "dev_flash", x)));
+		public bool IsFirmwareInstalled() => RequiredFirmwareDirectories.All(x => Directory.Exists(Path.Combine(DevFlash, x)));
 
 		public List<Ps3User> GetPlayers()
 		{
@@ -52,10 +61,9 @@ namespace ProjectCatalyst.Wrappers
 				(bool, RPS3FailedReason) valid = ValidateInstall();
 				if (!valid.Item1) throw new Exception(valid.Item2.ToString());
 
-				string usersPath = Path.Combine(path, "dev_hdd0", "home");
-				if (!Directory.Exists(usersPath)) throw new InvalidOperationException("dev_hdd0/home missing.");
+				if (!Directory.Exists(DevHome)) throw new InvalidOperationException("dev_hdd0/home missing.");
 
-				string[] usersData = Directory.GetDirectories(usersPath);
+				string[] usersData = Directory.GetDirectories(DevHome);
 				List<Ps3User> users = [];
 				users.AddRange(from userDir in usersData
 					let userId = int.Parse(Path.GetFileName(userDir))
@@ -82,9 +90,8 @@ namespace ProjectCatalyst.Wrappers
 				ExecutableRunner.KillClient("rpcs3.exe");
 
 				string user = userId.ToString().PadLeft(8, '0');
-
-				await ExecutableRunner.RunExecutable(Path.Combine(path, "rpcs3.exe"),
-					["--no-gui", "--fullscreen", "--user-id", user, game.InstallLocation]);
+				
+				await ExecutableRunner.RunExecutable(Executable, ["--no-gui", "--fullscreen", "--user-id", user, game.InstallLocation]);
 			}
 			catch (Exception ex)
 			{
@@ -101,8 +108,7 @@ namespace ProjectCatalyst.Wrappers
 
 				OverwriteWelcomeBox();
 				ExecutableRunner.KillClient("rpcs3.exe");
-				await ExecutableRunner.RunExecutable(Path.Combine(path, "rpcs3.exe"),
-					["--no-gui", "--fullscreen", game.InstallLocation]);
+				await ExecutableRunner.RunExecutable(Executable, ["--no-gui", "--fullscreen", game.InstallLocation]);
 			}
 			catch (Exception ex)
 			{
@@ -117,8 +123,7 @@ namespace ProjectCatalyst.Wrappers
 			try
 			{
 				if (IsFirmwareInstalled() && !forceInstall) return;
-				await ExecutableRunner.RunExecutable(Path.Combine(path, "rpcs3.exe"),
-					["--headless", "--installfw", firmware]);
+				await ExecutableRunner.RunExecutable(Executable, ["--headless", "--installfw", firmware]);
 			}
 			catch (Exception ex)
 			{
@@ -133,10 +138,9 @@ namespace ProjectCatalyst.Wrappers
 				(bool, RPS3FailedReason) valid = ValidateInstall();
 				if (!valid.Item1) throw new Exception(valid.Item2.ToString());
 
-				string usersPath = Path.Combine(path, "captures");
-				if (!Directory.Exists(usersPath)) throw new InvalidOperationException("captures missing.");
+				if (!Directory.Exists(Captures)) throw new InvalidOperationException("captures missing.");
 
-				return Directory.GetFiles(usersPath, "*.*").ToList();
+				return Directory.GetFiles(Captures, "*.*").ToList();
 			}
 			catch (Exception ex)
 			{
@@ -151,18 +155,17 @@ namespace ProjectCatalyst.Wrappers
 			try
 			{
 				List<Ps3Game> gamesData = [];
-				string iconOut = Path.Combine(path, "Icons", "ProjectCatalyst");
 
-				string gamesDir = gamesPath ?? Path.Combine(path, "games");
+				string gamesDir = gamesPath ?? Games;
 				if (!Directory.Exists(gamesDir))
 					throw new InvalidOperationException("Failed to find games folder");
 
-				Directory.CreateDirectory(iconOut);
+				Directory.CreateDirectory(GameIcons);
 
 				foreach (string iso in Directory.GetFiles(gamesDir, "*.iso"))
 				{
 					Ps3GameMetadata meta = Ps3SfoReader.ReadMetadata(iso);
-					string iconExtract = Path.Combine(iconOut, $"{meta.TitleId}.png");
+					string iconExtract = Path.Combine(GameIcons, $"{meta.TitleId}.png");
 					if (!File.Exists(iconExtract))
 						IsoReader.ExtractFile(iso, "PS3_GAME/ICON0.png", iconExtract);
 					gamesData.Add(new Ps3Game(meta, iconExtract, iso));
@@ -177,6 +180,27 @@ namespace ProjectCatalyst.Wrappers
 			}
 		}
 
+		public void CreateUser(string username)
+		{
+			int userIndex = Directory.GetDirectories(DevHome, "*").Length + 1;
+			string user = userIndex.ToString().PadLeft(8, '0');
+			
+			if (Directory.Exists(Path.Combine(DevHome, user)))
+			{
+				for (int fileIndex = 1; fileIndex <= userIndex; fileIndex++)
+				{
+					user = fileIndex.ToString().PadLeft(8, '0');
+					if (Directory.Exists(user)) continue;
+					break;
+				}
+			}
+
+			string newUserDirectory = Path.Combine(DevHome, user);
+			Directory.CreateDirectory(Path.Combine(newUserDirectory, "exdata"));
+			Directory.CreateDirectory(Path.Combine(newUserDirectory, "savedata"));
+			Directory.CreateDirectory(Path.Combine(newUserDirectory, "trophy"));
+			File.WriteAllText(Path.Combine(newUserDirectory, "localusername"), username);
+		}
 
 		private void OverwriteWelcomeBox(bool enabled = false)
 		{

@@ -1,32 +1,30 @@
-using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using Microsoft.Win32;
 using ProjectCatalyst.Models;
 
 namespace ProjectCatalyst.Views.Consoles.Ps3
 {
-	public partial class FirmwareInstallOverlay
+	public partial class CreateUserOverlay
 	{
-		private TaskCompletionSource<string?>? _tcs;
+		private TaskCompletionSource<bool?>? _tcs;
 
 		public bool IsOpen { get; private set; }
 
-		public FirmwareInstallOverlay()
+		public CreateUserOverlay()
 		{
 			InitializeComponent();
 			Visibility = Visibility.Collapsed;
 		}
 
-		public Task<string?> ShowAsync(EmulatorConfig? existing = null)
+		public Task<bool?> ShowAsync(EmulatorConfig? existing = null)
 		{
-			_tcs = new TaskCompletionSource<string?>();
+			_tcs = new TaskCompletionSource<bool?>();
 			ValidationText.Visibility = Visibility.Collapsed;
 
-			UpdateFilePathBox.Text = existing is not null ? existing.ExecutablePath : string.Empty;
+			UpdateUsernameBox.Text = existing is not null ? existing.ExecutablePath : string.Empty;
 
 			IsOpen = true;
 			Visibility = Visibility.Visible;
@@ -34,39 +32,35 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 
 			return _tcs.Task;
 		}
-
-		private void OnUpdateFileClick(object sender, RoutedEventArgs e)
-		{
-			OpenFileDialog dialog = new()
-			{
-				Title = "Select Emulator Executable",
-				Filter = "PS3 Update FIle (*.pup)|*.pup"
-			};
-
-			if (dialog.ShowDialog() == true)
-			{
-				UpdateFilePathBox.Text = dialog.FileName;
-			}
-		}
 		
-		private void OnUpdateFilePathChanged(object sender, TextChangedEventArgs e)
+		private void OnUpdateUsername(object sender, TextChangedEventArgs e)
 		{
-			string path = UpdateFilePathBox.Text;
-			if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+			string username = UpdateUsernameBox.Text;
+			if (string.IsNullOrWhiteSpace(username) || username.Length < 3 || username.Length > 16)
 			{
-				ShowValidationMessage("File not found");
+				ShowValidationMessage("Please enter a valid username 3-16 characters.");
 			}
 		}
 
-		private void OnSaveClick(object sender, RoutedEventArgs e)
+		private void OnCreateUserClick(object sender, RoutedEventArgs e)
 		{
-			if (string.IsNullOrWhiteSpace(UpdateFilePathBox.Text) || !File.Exists(UpdateFilePathBox.Text))
+			string username = UpdateUsernameBox.Text;
+			if (string.IsNullOrWhiteSpace(username) || username.Length < 3 || username.Length > 16)
 			{
-				ShowValidationMessage("Choose a valid PS3 update file.");
+				ShowValidationMessage("Please enter a valid username 3-16 characters.");
 				return;
 			}
-			
-			Complete(UpdateFilePathBox.Text);
+
+			if (DataContext is MainWindow mainWindow)
+			{
+				if (mainWindow.ActiveConsoleView is Ps3ConsoleView consoleView)
+				{
+					consoleView.RPCS3.CreateUser(username);
+					consoleView.ReloadCategories();
+				}
+			} else LogError("Failed to create username, cannot find ConsoleView");
+
+			Close();
 		}
 
 		private void OnCancelClick(object sender, RoutedEventArgs e) => Complete(null);
@@ -77,11 +71,11 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 			ValidationText.Visibility = Visibility.Visible;
 		}
 
-		private void Complete(string? result)
+		private void Complete(bool? result)
 		{
 			if (_tcs is null) return;
 
-			TaskCompletionSource<string?> tcs = _tcs;
+			TaskCompletionSource<bool?> tcs = _tcs;
 			_tcs = null;
 			IsOpen = false;
 
