@@ -36,17 +36,22 @@ namespace ProjectCatalyst.Views.Consoles
 		{
 			_emulatorConfig = config;
 
+			Log($"Starting RPCS3 wrapper with: {_emulatorConfig.ExecutablePath}");
 			_rpcs3 = new RPCS3(Path.GetDirectoryName(_emulatorConfig.ExecutablePath)!);
 
+			Log("Building interface");
 			InitializeComponent();
 			
+			Log("Building categories");
 			_categories = BuildCategories();
 			_lastItemIndexPerCategory = new int[_categories.Count];
 			CategoryList.ItemsSource = _categories;
 			ItemsListControl.ItemsSource = CurrentItems;
 
+			Log("Setting active user ");
 			UpdateActiveUserIndicator();
 
+			Log("Starting clock timer");
 			_clockTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
 			_clockTimer.Tick += (_, _) => UpdateClock();
 			_clockTimer.Start();
@@ -56,6 +61,7 @@ namespace ProjectCatalyst.Views.Consoles
 			Unloaded += (_, _) => StopBackgroundVideo();
 			Unloaded += (_, _) => StopBackgroundAudio();
 
+			Log("Starting media streams");
 			StartBackgroundVideo();
 			StartBackgroundAudio();
 
@@ -91,7 +97,9 @@ namespace ProjectCatalyst.Views.Consoles
 		
 		public string GetResource(string category, string name)
 		{
-			return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "ps3", category, name);
+			string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "ps3", category, name);
+			LogInfo($"Grabbing resource: {path}");
+			return path;
 		}
 
 		private string GetUserImage(int userId)
@@ -103,69 +111,82 @@ namespace ProjectCatalyst.Views.Consoles
 
 		private List<XmbCategory> BuildCategories()
 		{
-			
-			string executableName = Path.GetFileName(_emulatorConfig.ExecutablePath);
-
-			switch (executableName)
+			try
 			{
-				case "rpcs3.exe":
-					XmbCategory userCategory = new() { Name = "Users", IconPath = GetResource("Icons", "menu_quickmenu.png") };
-					XmbCategory gamesCategory = new() { Name = "Games", IconPath = GetResource("Icons", "default.png") };
-					XmbCategory screenshotsCategory = new() { Name = "Pictures", IconPath = GetResource("Icons", "images.png") };
-					XmbCategory settingsCategory = new() { Name = "Settings", IconPath = GetResource("Icons", "settings.png") };
-					foreach (RPCS3.Ps3User user in _rpcs3.GetPlayers())
-					{
-						userCategory.Items.Add(new XmbItem
-						{
-							Name = user.Username,
-							CoverLabel = user.Username[0].ToString().ToUpperInvariant(),
-							CoverAccentColor = Color.FromRgb(0x5A, 0x6A, 0x8A),
-							CoverImagePath = GetUserImage(user.UserId),
-							Subtitle = user.UserId.ToString()
-						});
-					}
-					userCategory.Items.Add(new XmbItem { Name = "Add User", CoverImagePath = GetResource("Icons", "add.png"), Subtitle = "SYS" });
-					foreach (RPCS3.Ps3Game game in _rpcs3.GetAllGames())
-					{
-						gamesCategory.Items.Add(new XmbItem
-						{
-							Name = game.MetData.Title,
-							Subtitle = $"{game.MetData.TitleId}",
-							CoverImagePath = game.IconLocation,
-							CoverAccentColor = Color.FromRgb(0x2E, 0x7D, 0x5A),
-							IsGameItem = true
-						});
-					}
-					foreach (string imagePath in _rpcs3.GetScreenshots())
-					{
-						screenshotsCategory.Items.Add(new XmbItem
-						{
-							Name = Path.GetFileName(imagePath),
-							Subtitle = File.GetCreationTime(imagePath).ToString("D"),
-							CoverImagePath = imagePath,
-							IsGameItem = true // Keep it true to make it full size
-						});
-					}
+				string executableName = Path.GetFileName(_emulatorConfig.ExecutablePath);
 
-					settingsCategory.Items.AddRange([
-						new XmbItem
+				switch (executableName)
+				{
+					case "rpcs3.exe":
+						XmbCategory userCategory = new()
+							{ Name = "Users", IconPath = GetResource("Icons", "menu_quickmenu.png") };
+						XmbCategory gamesCategory = new()
+							{ Name = "Games", IconPath = GetResource("Icons", "default.png") };
+						XmbCategory screenshotsCategory = new()
+							{ Name = "Pictures", IconPath = GetResource("Icons", "images.png") };
+						XmbCategory settingsCategory = new()
+							{ Name = "Settings", IconPath = GetResource("Icons", "settings.png") };
+						foreach (RPCS3.Ps3User user in _rpcs3.GetPlayers())
 						{
-							Name = "Background Video",
-							CoverImagePath = GetResource("Icons", "database.png")
-						},
-						new XmbItem
-						{
-							Name = "Reload Data",
-							CoverImagePath = GetResource("Icons", "reload.png")
-						},
-						new XmbItem
-						{
-							Name = "Install Firmware",
-							CoverImagePath = GetResource("Icons", "core-disk-options.png")
+							userCategory.Items.Add(new XmbItem
+							{
+								Name = user.Username,
+								CoverLabel = user.Username[0].ToString().ToUpperInvariant(),
+								CoverAccentColor = Color.FromRgb(0x5A, 0x6A, 0x8A),
+								CoverImagePath = GetUserImage(user.UserId),
+								Subtitle = user.UserId.ToString()
+							});
 						}
-					]);
 
-					return [userCategory, gamesCategory, screenshotsCategory, settingsCategory];
+						userCategory.Items.Add(new XmbItem { Name = "Add User", CoverImagePath = GetResource("Icons", "add.png"), Subtitle = "SYS" });
+						foreach (RPCS3.Ps3Game game in _rpcs3.GetAllGames(_emulatorConfig.GamesDirectory))
+						{
+							gamesCategory.Items.Add(new XmbItem
+							{
+								Name = game.MetData.Title,
+								Subtitle = $"{game.MetData.TitleId}",
+								CoverImagePath = game.IconLocation,
+								CoverAccentColor = Color.FromRgb(0x2E, 0x7D, 0x5A),
+								IsGameItem = true
+							});
+						}
+
+						foreach (string imagePath in _rpcs3.GetScreenshots())
+						{
+							screenshotsCategory.Items.Add(new XmbItem
+							{
+								Name = Path.GetFileName(imagePath),
+								Subtitle = File.GetCreationTime(imagePath).ToString("D"),
+								CoverImagePath = imagePath,
+								IsGameItem = true // Keep it true to make it full size
+							});
+						}
+
+						settingsCategory.Items.AddRange([
+							new XmbItem
+							{
+								Name = "Background Video",
+								CoverImagePath = GetResource("Icons", "database.png")
+							},
+							new XmbItem
+							{
+								Name = "Reload Data",
+								CoverImagePath = GetResource("Icons", "reload.png")
+							},
+							new XmbItem
+							{
+								Name = "Install Firmware",
+								CoverImagePath = GetResource("Icons", "core-disk-options.png")
+							}
+						]);
+
+						return [userCategory, gamesCategory, screenshotsCategory, settingsCategory];
+				}
+			}
+			catch (Exception ex)
+			{
+				LogError(ex.ToString());
+				Environment.Exit(1);
 			}
 
 			throw new InvalidOperationException("Invalid emu setup");
@@ -272,6 +293,7 @@ namespace ProjectCatalyst.Views.Consoles
 
 		public void ActivateSelected()
 		{
+			Log("Activating selection");
 			if (ScreenshotViewer.IsOpen) return; // nothing to activate while viewing a photo
 
 			XmbItem currentItem = CurrentItems.First(x => x.IsSelected);
@@ -305,6 +327,7 @@ namespace ProjectCatalyst.Views.Consoles
 							(bool valid, RPCS3.RPS3FailedReason reason) = _rpcs3.ValidateInstall();
 							if (!valid)
 							{
+								LogError(reason.ToString());
 								CatalystMessageBoxResult result = await mainWindow.CatalystMessageBoxControl.ShowAsync("ERROR", $"Failed to validate install: {reason}", icon: CatalystMessageBoxIcon.Error);
 								_ = result;
 								return;
@@ -312,6 +335,7 @@ namespace ProjectCatalyst.Views.Consoles
 
 							if (!_rpcs3.IsFirmwareInstalled())
 							{
+								LogError("Missing required firmware");
 								CatalystMessageBoxResult result = await mainWindow.CatalystMessageBoxControl.ShowAsync("ERROR", $"RPCS does not have any valid firmware installed, please go to the settings tab.", icon: CatalystMessageBoxIcon.Error);
 								_ = result;
 								return;
@@ -359,6 +383,13 @@ namespace ProjectCatalyst.Views.Consoles
 						if (imagePaths.Count > 0 && startIndex >= 0)
 						{
 							ScreenshotViewer.Show(imagePaths, startIndex);
+						}
+					}
+					else if (_categoryIndex == 3)
+					{
+						if (_itemIndex == 2)
+						{
+							await FirmwareInstaller.ShowAsync();
 						}
 					}
 
@@ -410,7 +441,7 @@ namespace ProjectCatalyst.Views.Consoles
 			{
 				if (!VideoVariantFileNames.TryGetValue(VideoVariant, out string? fileName))
 				{
-					Debug.WriteLine("Unknown video variant.");
+					LogError("Unknown video variant.");
 					return;
 				}
 
@@ -449,7 +480,11 @@ namespace ProjectCatalyst.Views.Consoles
 			{
 				string audioPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "ps3", "Sounds", AudioFileName);
 
-				if (!File.Exists(audioPath)) return;
+				if (!File.Exists(audioPath))
+				{
+					LogError($"Missing audio file: {audioPath}");
+					return;
+				}
 				
 				BackgroundAudio.Source = new Uri(audioPath, UriKind.Absolute);
 				BackgroundAudio.Play();

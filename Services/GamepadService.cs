@@ -138,6 +138,7 @@ namespace ProjectCatalyst.Services
 
 		private void Disable(string reason)
 		{
+			LogError($"Polling failed: {reason}");
 			IsControllerConnected = false;
 			_timer.Stop();
 			PollingDisabled?.Invoke(this, reason);

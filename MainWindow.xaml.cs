@@ -26,19 +26,21 @@ namespace ProjectCatalyst
 
 		public MainWindow()
 		{
+			Log("Building MainWindow");
 			InitializeComponent();
 			DataContext = this;
 
-			LoadPlatforms();
+			Log("Loading platforms");
+			try { LoadPlatforms();} catch (Exception ex) { LogError(ex.ToString()); }
 
+			Log("Starting clock timers");
 			_clockTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
 			_clockTimer.Tick += (_, _) => ClockText.Text = DateTime.Now.ToString("dddd, HH:mm");
 			_clockTimer.Start();
 			ClockText.Text = DateTime.Now.ToString("dddd, HH:mm");
 
+			Log("Registering gamepad event handler");
 			_gamepad.ButtonPressed += OnGamepadButtonPressed;
-
-			Settings.AccentColorChanged += OnAccentColorChanged;
 		}
 
 		private void LoadPlatforms() => RebuildPlatformTiles(EmulatorConfigStore.Load());
@@ -149,9 +151,14 @@ namespace ProjectCatalyst
 
 		private async Task LaunchSelectedAsync()
 		{
+			Log("Attempt launch sequence");
 			try
 			{
 				if (PlatformSelector.SelectedItem is not PlatformItem item) return;
+
+				LogInfo($"{item.Name} -> IsSettingsTile = {item.IsSettingsTile}");
+				LogInfo($"{item.Name} -> IsAddEmulatorTile = {item.IsAddEmulatorTile}");
+				LogInfo($"{item.Name} -> ConsoleViewFactory is null = {item.ConsoleViewFactory is null}");
 
 				if (item.IsSettingsTile)
 				{
@@ -181,12 +188,13 @@ namespace ProjectCatalyst
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine(ex);
+				LogError($"Launch sequence failed: {ex}");
 			}
 		}
 
 		private void OpenSettings()
 		{
+			LogInfo("Opening settings");
 			_isSettingsOpen = true;
 			Settings.Visibility = Visibility.Visible;
 			Settings.Open();
@@ -194,61 +202,71 @@ namespace ProjectCatalyst
 
 		private void OnSettingsRequestClose(object? sender, EventArgs e)
 		{
+			LogInfo("Closing settings");
 			_isSettingsOpen = false;
 			Settings.Close();
 			PlatformSelector.Focus();
 			Keyboard.Focus(PlatformSelector);
 		}
-
-		private void OnSettingsRequestExitApp(object? sender, EventArgs e) => Application.Current.Shutdown();
-
-		private void OnAccentColorChanged(object? sender, Color color)
-		{
-			Application.Current.Resources["AccentColor"] = color;
-			Application.Current.Resources["AccentBrush"] = new SolidColorBrush(color);
-		}
 		
 		private async Task OpenEmulatorSetupAsync()
 		{
-			EmulatorConfig? config = await EmulatorSetupControl.ShowAsync();
+			LogInfo("Launching emulator setup");
+			try
+			{
+				EmulatorConfig? config = await EmulatorSetupControl.ShowAsync();
 
-			PlatformSelector.Focus();
-			Keyboard.Focus(PlatformSelector);
+				PlatformSelector.Focus();
+				Keyboard.Focus(PlatformSelector);
 
-			if (config is null) return;
+				if (config is null) return;
 
-			List<EmulatorConfig> configs = EmulatorConfigStore.Load();
-			configs.Add(config);
-			EmulatorConfigStore.Save(configs);
+				List<EmulatorConfig> configs = EmulatorConfigStore.Load();
+				configs.Add(config);
+				EmulatorConfigStore.Save(configs);
 
-			RebuildPlatformTiles(configs);
+				RebuildPlatformTiles(configs);
 
-			int newIndex = configs.Count - 1;
-			if (newIndex >= 0 && newIndex < Platforms.Count) 
-				PlatformSelector.SelectedIndex = newIndex;
+				int newIndex = configs.Count - 1;
+				if (newIndex >= 0 && newIndex < Platforms.Count)
+					PlatformSelector.SelectedIndex = newIndex;
+			}
+			catch (Exception ex)
+			{
+				LogError($"Emulator setup failed: {ex}");
+			}
 		}
 
 		private void NavigateToConsole(PlatformItem item)
 		{
-			if (item.ConsoleViewFactory is null) return;
+			LogInfo("Navigating to console view");
+			try
+			{
+				if (item.ConsoleViewFactory is null) return;
 
-			UserControl view = item.ConsoleViewFactory();
-			ConsoleHost.Content = view;
-			ConsoleHost.Visibility = Visibility.Visible;
-			LauncherRoot.Visibility = Visibility.Collapsed;
-			_isConsoleViewOpen = true;
+				UserControl view = item.ConsoleViewFactory();
+				ConsoleHost.Content = view;
+				ConsoleHost.Visibility = Visibility.Visible;
+				LauncherRoot.Visibility = Visibility.Collapsed;
+				_isConsoleViewOpen = true;
 
-			if (view is not IConsoleView consoleView) return;
+				if (view is not IConsoleView consoleView) return;
 
-			_activeConsoleView = consoleView;
-			consoleView.BackRequested += OnConsoleViewBackRequested;
-			consoleView.FocusDefault();
+				_activeConsoleView = consoleView;
+				consoleView.BackRequested += OnConsoleViewBackRequested;
+				consoleView.FocusDefault();
+			}
+			catch (Exception ex)
+			{
+				LogError($"Failed to launch UI: {ex}");
+			}
 		}
 
 		private void OnConsoleViewBackRequested(object? sender, EventArgs e) => ReturnToLauncher();
 
 		private void ReturnToLauncher()
 		{
+			Log("Returning to main menu");
 			if (_activeConsoleView is not null)
 			{
 				_activeConsoleView.BackRequested -= OnConsoleViewBackRequested;
@@ -303,85 +321,96 @@ namespace ProjectCatalyst
 
 		private void OnGamepadButtonPressed(object? sender, GamepadButton button)
 		{
-			if (EmulatorSetupControl.IsOpen)
-				return;
-
-			if (CatalystMessageBoxControl.IsOpen)
+			try
 			{
-				_activeConsoleView?.PlayDirectionalAudio(default, button);
-				switch (button)
-				{
-					case GamepadButton.DPadLeft:
-						CatalystMessageBoxControl.MoveSelection(-1);
-						break;
-					case GamepadButton.DPadRight:
-						CatalystMessageBoxControl.MoveSelection(1);
-						break;
-					case GamepadButton.Accept:
-						CatalystMessageBoxControl.InvokeSelected();
-						break;
-					case GamepadButton.Back:
-						CatalystMessageBoxControl.RequestCancel();
-						break;
-				}
-				return;
-			}
+				if (EmulatorSetupControl.IsOpen)
+					return;
 
-			if (_isSettingsOpen)
-			{
-				if (button is GamepadButton.Back)
+				if (CatalystMessageBoxControl.IsOpen)
 				{
 					_activeConsoleView?.PlayDirectionalAudio(default, button);
-					OnSettingsRequestClose(this, EventArgs.Empty);
-				}
-				return;
-			}
+					switch (button)
+					{
+						case GamepadButton.DPadLeft:
+							CatalystMessageBoxControl.MoveSelection(-1);
+							break;
+						case GamepadButton.DPadRight:
+							CatalystMessageBoxControl.MoveSelection(1);
+							break;
+						case GamepadButton.Accept:
+							CatalystMessageBoxControl.InvokeSelected();
+							break;
+						case GamepadButton.Back:
+							CatalystMessageBoxControl.RequestCancel();
+							break;
+					}
 
-			if (_isConsoleViewOpen && _activeConsoleView is not null)
-			{
-				_activeConsoleView.PlayDirectionalAudio(default, button);
+					return;
+				}
+
+				if (_isSettingsOpen)
+				{
+					if (button is GamepadButton.Back)
+					{
+						_activeConsoleView?.PlayDirectionalAudio(default, button);
+						OnSettingsRequestClose(this, EventArgs.Empty);
+					}
+
+					return;
+				}
+
+				if (_isConsoleViewOpen && _activeConsoleView is not null)
+				{
+					_activeConsoleView.PlayDirectionalAudio(default, button);
+
+					switch (button)
+					{
+						case GamepadButton.DPadLeft:
+							_activeConsoleView.MoveHorizontal(-1);
+							break;
+						case GamepadButton.DPadRight:
+							_activeConsoleView.MoveHorizontal(1);
+							break;
+						case GamepadButton.DPadUp:
+							_activeConsoleView.MoveVertical(-1);
+							break;
+						case GamepadButton.DPadDown:
+							_activeConsoleView.MoveVertical(1);
+							break;
+						case GamepadButton.Accept:
+							_activeConsoleView.ActivateSelected();
+							break;
+						case GamepadButton.Back:
+							if (!_activeConsoleView.TryHandleBack())
+							{
+								ReturnToLauncher();
+							}
+
+							break;
+					}
+
+					return;
+				}
 
 				switch (button)
 				{
 					case GamepadButton.DPadLeft:
-						_activeConsoleView.MoveHorizontal(-1);
+						MoveSelection(-1);
 						break;
 					case GamepadButton.DPadRight:
-						_activeConsoleView.MoveHorizontal(1);
-						break;
-					case GamepadButton.DPadUp:
-						_activeConsoleView.MoveVertical(-1);
-						break;
-					case GamepadButton.DPadDown:
-						_activeConsoleView.MoveVertical(1);
+						MoveSelection(1);
 						break;
 					case GamepadButton.Accept:
-						_activeConsoleView.ActivateSelected();
+						_ = LaunchSelectedAsync();
 						break;
-					case GamepadButton.Back:
-						if (!_activeConsoleView.TryHandleBack())
-						{
-							ReturnToLauncher();
-						}
+					case GamepadButton.Start:
+						OpenSettings();
 						break;
 				}
-				return;
 			}
-
-			switch (button)
+			catch (Exception ex)
 			{
-				case GamepadButton.DPadLeft:
-					MoveSelection(-1);
-					break;
-				case GamepadButton.DPadRight:
-					MoveSelection(1);
-					break;
-				case GamepadButton.Accept:
-					_ = LaunchSelectedAsync();
-					break;
-				case GamepadButton.Start:
-					OpenSettings();
-					break;
+				LogError(ex.ToString());
 			}
 		}
 

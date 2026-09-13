@@ -1,6 +1,5 @@
 ﻿using ProjectCatalyst.Util;
 using System.IO;
-using System.IO.Pipelines;
 
 namespace ProjectCatalyst.Wrappers
 {
@@ -23,125 +22,194 @@ namespace ProjectCatalyst.Wrappers
 
 		public (bool, RPS3FailedReason) ValidateInstall()
 		{
-			if (!File.Exists(Path.Combine(path, "rpcs3.exe")))
+			try
+			{
+
+				if (!File.Exists(Path.Combine(path, "rpcs3.exe")))
+					return (false, RPS3FailedReason.MissingExecutable);
+
+				if (RequiredFirstLaunchDirectories.Any(directory => !Directory.Exists(Path.Combine(path, directory))))
+					return (false, RPS3FailedReason.MissingInitDirectory);
+
+				if (RequiredDirectories.Any(directory => !Directory.Exists(Path.Combine(path, directory))))
+					return (false, RPS3FailedReason.MissingFirstLaunchDirectories);
+
+				return (true, RPS3FailedReason.Valid);
+			}
+			catch (Exception ex)
+			{
+				LogError(ex.ToString());
 				return (false, RPS3FailedReason.MissingExecutable);
-
-			if (RequiredFirstLaunchDirectories.Any(directory => !Directory.Exists(Path.Combine(path, directory))))
-				return (false, RPS3FailedReason.MissingInitDirectory);
-
-			if (RequiredDirectories.Any(directory => !Directory.Exists(Path.Combine(path, directory))))
-				return (false, RPS3FailedReason.MissingFirstLaunchDirectories);
-
-			return (true, RPS3FailedReason.Valid);
+			}
 		}
 
 		public bool IsFirmwareInstalled() => RequiredFirmwareDirectories.All(x => Directory.Exists(Path.Combine(path, "dev_flash", x)));
 
 		public List<Ps3User> GetPlayers()
 		{
-			(bool, RPS3FailedReason) valid = ValidateInstall();
-			if (!valid.Item1) throw new Exception(valid.Item2.ToString());
+			try
+			{
+				(bool, RPS3FailedReason) valid = ValidateInstall();
+				if (!valid.Item1) throw new Exception(valid.Item2.ToString());
 
-			string usersPath = Path.Combine(path, "dev_hdd0", "home");
-			if (!Directory.Exists(usersPath)) throw new InvalidOperationException("dev_hdd0/home missing.");
+				string usersPath = Path.Combine(path, "dev_hdd0", "home");
+				if (!Directory.Exists(usersPath)) throw new InvalidOperationException("dev_hdd0/home missing.");
 
-			string[] usersData = Directory.GetDirectories(usersPath);
-			List<Ps3User> users = [];
-			users.AddRange(from userDir in usersData let userId = int.Parse(Path.GetFileName(userDir)) let username = File.ReadAllText(Path.Combine(userDir, "localusername")) select new Ps3User(userId, username));
-			return users;
+				string[] usersData = Directory.GetDirectories(usersPath);
+				List<Ps3User> users = [];
+				users.AddRange(from userDir in usersData
+					let userId = int.Parse(Path.GetFileName(userDir))
+					let username = File.ReadAllText(Path.Combine(userDir, "localusername"))
+					select new Ps3User(userId, username));
+				return users;
 
+			}
+			catch (Exception ex)
+			{
+				LogError(ex.ToString());
+				return [];
+			}
 		}
 
 		public async Task LaunchGameAsUser(Ps3Game game, int userId)
 		{
-			if (!IsFirmwareInstalled())
-				throw new InvalidOperationException("Missing firmware");
+			try
+			{
+				if (!IsFirmwareInstalled())
+					throw new InvalidOperationException("Missing firmware");
 
-			OverwriteWelcomeBox();
-			ExecutableRunner.KillClient("rpcs3.exe");
+				OverwriteWelcomeBox();
+				ExecutableRunner.KillClient("rpcs3.exe");
 
-			string user = userId.ToString().PadLeft(8, '0');
+				string user = userId.ToString().PadLeft(8, '0');
 
-			await ExecutableRunner.RunExecutable(Path.Combine(path, "rpcs3.exe"), ["--no-gui", "--fullscreen", "--user-id", user, game.InstallLocation]);
+				await ExecutableRunner.RunExecutable(Path.Combine(path, "rpcs3.exe"),
+					["--no-gui", "--fullscreen", "--user-id", user, game.InstallLocation]);
+			}
+			catch (Exception ex)
+			{
+				LogError(ex.ToString());
+			}
 		}
 
 		public async Task LaunchGame(Ps3Game game)
 		{
-			if (!IsFirmwareInstalled())
-				throw new InvalidOperationException("Missing firmware");
+			try
+			{
+				if (!IsFirmwareInstalled())
+					throw new InvalidOperationException("Missing firmware");
 
-			OverwriteWelcomeBox();
-			ExecutableRunner.KillClient("rpcs3.exe");
-			await ExecutableRunner.RunExecutable(Path.Combine(path, "rpcs3.exe"), ["--no-gui", "--fullscreen", game.InstallLocation]);
+				OverwriteWelcomeBox();
+				ExecutableRunner.KillClient("rpcs3.exe");
+				await ExecutableRunner.RunExecutable(Path.Combine(path, "rpcs3.exe"),
+					["--no-gui", "--fullscreen", game.InstallLocation]);
+			}
+			catch (Exception ex)
+			{
+				LogError(ex.ToString());
+			}
 		}
 
 		public void InstallFirmware(string firmware, bool forceInstall = false) => InstallFirmwareAsync(firmware, forceInstall).Wait();
 
 		public async Task InstallFirmwareAsync(string firmware, bool forceInstall = false)
 		{
-			if (IsFirmwareInstalled() && !forceInstall) return;
-			await ExecutableRunner.RunExecutable(Path.Combine(path, "rpcs3.exe"), ["--headless", "--installfw", firmware]);
+			try
+			{
+				if (IsFirmwareInstalled() && !forceInstall) return;
+				await ExecutableRunner.RunExecutable(Path.Combine(path, "rpcs3.exe"),
+					["--headless", "--installfw", firmware]);
+			}
+			catch (Exception ex)
+			{
+				LogError(ex.ToString());
+			}
 		}
 
 		public List<string> GetScreenshots()
 		{
-			(bool, RPS3FailedReason) valid = ValidateInstall();
-			if (!valid.Item1) throw new Exception(valid.Item2.ToString());
+			try
+			{
+				(bool, RPS3FailedReason) valid = ValidateInstall();
+				if (!valid.Item1) throw new Exception(valid.Item2.ToString());
 
-			string usersPath = Path.Combine(path, "captures");
-			if (!Directory.Exists(usersPath)) throw new InvalidOperationException("captures missing.");
+				string usersPath = Path.Combine(path, "captures");
+				if (!Directory.Exists(usersPath)) throw new InvalidOperationException("captures missing.");
 
-			return Directory.GetFiles(usersPath, "*.*").ToList();
+				return Directory.GetFiles(usersPath, "*.*").ToList();
+			}
+			catch (Exception ex)
+			{
+				LogError(ex.ToString());
+				return [];
+			}
 		}
 
 
-		public List<Ps3Game> GetAllGames()
+		public List<Ps3Game> GetAllGames(string? gamesPath = null)
 		{
-			List<Ps3Game> gamesData = [];
-			string iconOut = Path.Combine(path, "Icons", "ProjectCatalyst");
-			string gamesDir = Path.Combine(path, "games");
-			if (!Directory.Exists(gamesDir))
-				throw new InvalidOperationException("Failed to find games folder");
-
-			Directory.CreateDirectory(iconOut);
-
-			foreach (string iso in Directory.GetFiles(gamesDir, "*.iso"))
+			try
 			{
-				Ps3GameMetadata meta = Ps3SfoReader.ReadMetadata(iso);
-				string iconExtract = Path.Combine(iconOut, $"{meta.TitleId}.png");
-				if (!File.Exists(iconExtract))
-					IsoReader.ExtractFile(iso, "PS3_GAME/ICON0.png", iconExtract);
-				gamesData.Add(new Ps3Game(meta, iconExtract, iso));
-			}
+				List<Ps3Game> gamesData = [];
+				string iconOut = Path.Combine(path, "Icons", "ProjectCatalyst");
 
-			return gamesData;
+				string gamesDir = gamesPath ?? Path.Combine(path, "games");
+				if (!Directory.Exists(gamesDir))
+					throw new InvalidOperationException("Failed to find games folder");
+
+				Directory.CreateDirectory(iconOut);
+
+				foreach (string iso in Directory.GetFiles(gamesDir, "*.iso"))
+				{
+					Ps3GameMetadata meta = Ps3SfoReader.ReadMetadata(iso);
+					string iconExtract = Path.Combine(iconOut, $"{meta.TitleId}.png");
+					if (!File.Exists(iconExtract))
+						IsoReader.ExtractFile(iso, "PS3_GAME/ICON0.png", iconExtract);
+					gamesData.Add(new Ps3Game(meta, iconExtract, iso));
+				}
+
+				return gamesData;
+			}
+			catch (Exception ex)
+			{
+				LogError(ex.ToString());
+				return [];
+			}
 		}
 
 
 		private void OverwriteWelcomeBox(bool enabled = false)
 		{
-			string settingsIni = Path.Combine(path, "GuiConfigs", "CurrentSettings.ini");
-			if (!File.Exists(settingsIni))
+			try
 			{
-				File.WriteAllText(settingsIni, $"""
-				                               [main_window]
-				                               infoBoxEnabledWelcome={enabled}
-				                               """);
-				return;
-			}
+				string settingsIni = Path.Combine(path, "GuiConfigs", "CurrentSettings.ini");
+				if (!File.Exists(settingsIni))
+				{
+					File.WriteAllText(settingsIni, $"""
+					                                [main_window]
+					                                infoBoxEnabledWelcome={enabled}
+					                                """);
+					return;
+				}
 
-			string fileText = File.ReadAllText(settingsIni);
-			if (fileText.Contains("infoBoxEnabledWelcome=true") || fileText.Contains("infoBoxEnabledWelcome=false"))
-			{
-				File.WriteAllText(settingsIni, 
-					enabled ? fileText.Replace("infoBoxEnabledWelcome=false", "infoBoxEnabledWelcome=true")
-						: fileText.Replace("infoBoxEnabledWelcome=true", "infoBoxEnabledWelcome=false"));
+				string fileText = File.ReadAllText(settingsIni);
+				if (fileText.Contains("infoBoxEnabledWelcome=true") || fileText.Contains("infoBoxEnabledWelcome=false"))
+				{
+					File.WriteAllText(settingsIni,
+						enabled
+							? fileText.Replace("infoBoxEnabledWelcome=false", "infoBoxEnabledWelcome=true")
+							: fileText.Replace("infoBoxEnabledWelcome=true", "infoBoxEnabledWelcome=false"));
+				}
+				else if (fileText.Contains("[main_window]"))
+				{
+					File.WriteAllText(settingsIni,
+						fileText.Replace("[main_window]",
+							$"[main_window]{Environment.NewLine}infoBoxEnabledWelcome={(enabled ? "true" : "false")}{Environment.NewLine}"));
+				}
 			}
-			else if (fileText.Contains("[main_window]"))
+			catch (Exception ex)
 			{
-				File.WriteAllText(settingsIni,
-					fileText.Replace("[main_window]",
-						$"[main_window]{Environment.NewLine}infoBoxEnabledWelcome={(enabled ? "true" : "false")}{Environment.NewLine}"));
+				LogError(ex.ToString());
 			}
 		}
 

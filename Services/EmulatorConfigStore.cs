@@ -24,18 +24,29 @@ namespace ProjectCatalyst.Services
 				string json = File.ReadAllText(FilePath);
 				return JsonSerializer.Deserialize<List<EmulatorConfig>>(json, Options) ?? [];
 			}
-			catch (Exception) { return []; }
+			catch (Exception ex)
+			{
+				LogError($"Emu config failed to load: {ex}");
+				return [];
+			}
 		}
 
 		public static void Save(IEnumerable<EmulatorConfig> configs)
 		{
-			string? directory = Path.GetDirectoryName(FilePath);
+			try
+			{
+				string? directory = Path.GetDirectoryName(FilePath);
 
-			if (!string.IsNullOrEmpty(directory)) 
-				Directory.CreateDirectory(directory);
+				if (!string.IsNullOrEmpty(directory))
+					Directory.CreateDirectory(directory);
 
-			string json = JsonSerializer.Serialize(configs, Options);
-			File.WriteAllText(FilePath, json);
+				string json = JsonSerializer.Serialize(configs, Options);
+				File.WriteAllText(FilePath, json);
+			}
+			catch (Exception ex)
+			{
+				LogError($"Emu config failed to save: {ex}");
+			}
 		}
 	}
 }

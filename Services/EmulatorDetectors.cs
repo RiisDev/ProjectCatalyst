@@ -25,7 +25,7 @@ namespace ProjectCatalyst.Services
 	{
 		public string? TryDetectUsersDirectory(string executablePath) => DetectorHelpers.FindNearExecutable(executablePath, @"dev_hdd0\home");
 
-		public string? TryDetectGamesDirectory(string executablePath) => DetectorHelpers.FindNearExecutable(executablePath, "games", "games");
+		public string? TryDetectGamesDirectory(string executablePath) => DetectorHelpers.FindNearExecutable(executablePath, "games");
 	}
 
 	public sealed class DolphinDetector : IEmulatorDetector

@@ -359,5 +359,6 @@
 		</StackPanel>
 
 		<views:ScreenshotViewerOverlay x:Name="ScreenshotViewer" Grid.RowSpan="5" />
+		<views:FirmwareInstallOverlay  x:Name="FirmwareInstaller" Grid.RowSpan="5" />
 	</Grid>
 </UserControl>

@@ -1,0 +1,64 @@
+<UserControl x:Class="ProjectCatalyst.Views.FirmwareInstallOverlay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="1080" d:DesignWidth="1920"
+             Focusable="False"
+             KeyDown="OnKeyDown">
+
+	<Grid>
+		<Border x:Name="Backdrop" Background="#CC05070D" Opacity="0" />
+
+        <Border x:Name="Card"
+                Background="{StaticResource PanelBrush}"
+                BorderBrush="{StaticResource PanelBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="20"
+                Width="640"
+                Padding="44,36"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Opacity="0"
+                RenderTransformOrigin="0.5,0.5">
+            <Border.Effect>
+                <DropShadowEffect Color="Black" Direction="270" ShadowDepth="10" BlurRadius="40" Opacity="0.5" />
+            </Border.Effect>
+            <Border.RenderTransform>
+                <ScaleTransform x:Name="CardScale" ScaleX="0.94" ScaleY="0.94" />
+            </Border.RenderTransform>
+
+            <StackPanel>
+                <TextBlock Text="Select Firmware" Style="{StaticResource TitleText}" FontSize="28" Margin="0,0,0,4" />
+                <TextBlock Text="Select an existing firmware file for rpsc3."
+                           Style="{StaticResource SubtitleText}" Margin="0,0,0,24" />
+
+                <TextBlock Text="PS3UPDAT" Style="{StaticResource HintText}" Margin="0,0,0,8" />
+                <Grid Margin="0,0,0,18">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="ExecutablePathBox"
+                             Style="{StaticResource CatalystTextBox}"
+                             TextChanged="OnExecutablePathChanged" />
+                    <Button Grid.Column="1" Content="Browse…" Style="{StaticResource CatalystButton}"
+                            Margin="10,0,0,0" Click="OnBrowseExecutableClick" />
+                </Grid>
+
+                <TextBlock x:Name="ValidationText"
+                           Foreground="{StaticResource WarningBrush}"
+                           FontSize="13"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,14"
+                           Visibility="Collapsed" />
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="Cancel" Style="{StaticResource CatalystButton}" Margin="0,0,12,0" Click="OnCancelClick" />
+                    <Button Content="Install" Style="{StaticResource CatalystButton}" Click="OnSaveClick" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>
