@@ -14,10 +14,47 @@ namespace ProjectCatalyst.Util
 			catch {/**/}
 		}
 
+		private static async Task<string> ResolveUnixPathAsync(string windowsPath)
+		{
+			try
+			{
+				Process process = new()
+				{
+					StartInfo = new ProcessStartInfo
+					{
+						FileName = @"Z:\usr\bin\winepath",
+						RedirectStandardOutput = true,
+						UseShellExecute = false,
+						CreateNoWindow = true
+					}
+				};
+
+				process.StartInfo.ArgumentList.Add("-u");
+				process.StartInfo.ArgumentList.Add(windowsPath);
+
+				process.Start();
+				string output = (await process.StandardOutput.ReadToEndAsync()).Trim();
+
+				try { await process.WaitForExitAsync(); }
+				catch (InvalidOperationException) { /**/ }
+
+				if (!string.IsNullOrWhiteSpace(output)) return output;
+			}
+			catch (Exception ex)
+			{
+				LogError($"winepath -u failed for {windowsPath}: {ex}");
+			}
+
+			string normalized = windowsPath.Replace('\\', '/');
+			return normalized.Length >= 2 && normalized[1] == ':' ? normalized[2..] : normalized;
+		}
+
 		public static async Task EnsureAppImageDataLink()
 		{
 			try
 			{
+				string scriptPath = await ResolveUnixPathAsync(AppImageLinkScript);
+
 				Process process = new()
 				{
 					StartInfo = new ProcessStartInfo
@@ -29,7 +66,7 @@ namespace ProjectCatalyst.Util
 					}
 				};
 
-				process.StartInfo.ArgumentList.Add(AppImageLinkScript);
+				process.StartInfo.ArgumentList.Add(scriptPath);
 
 				process.Start();
 
@@ -58,9 +95,19 @@ namespace ProjectCatalyst.Util
 		{
 			try
 			{
-				(string fileName, string[] launchArguments) = string.Equals(Path.GetExtension(executable), ".AppImage", StringComparison.OrdinalIgnoreCase)
-					? (@"Z:\bin\sh", [AppImageLaunchScript, executable, .. arguments])
-					: (executable, arguments);
+				string fileName;
+				string[] launchArguments;
+
+				if (string.Equals(Path.GetExtension(executable), ".AppImage", StringComparison.OrdinalIgnoreCase))
+				{
+					fileName = @"Z:\bin\sh";
+					launchArguments = [await ResolveUnixPathAsync(AppImageLaunchScript), executable, .. arguments];
+				}
+				else
+				{
+					fileName = executable;
+					launchArguments = arguments;
+				}
 
 				Process process = new()
 				{
