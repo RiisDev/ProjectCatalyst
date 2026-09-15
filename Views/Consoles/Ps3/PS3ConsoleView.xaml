@@ -362,6 +362,8 @@
 		<ps3:ScreenshotViewerOverlay x:Name="ScreenshotViewer" Grid.RowSpan="5" />
 		<ps3:FirmwareInstallOverlay  x:Name="FirmwareInstaller" Grid.RowSpan="5" />
 		<ps3:CreateUserOverlay x:Name="CreateUserOverlay" Grid.RowSpan="5"  />
+		<ps3:BackgroundVideoSelectorOverlay x:Name="BackgroundVideoSelector" Grid.RowSpan="5" />
+		<ps3:VolumeAdjustOverlay x:Name="VolumeAdjuster" Grid.RowSpan="5" />
 		<views:DownloadOverlay  x:Name="DownloadOverlay" Grid.RowSpan="5" />
 	</Grid>
 </UserControl>

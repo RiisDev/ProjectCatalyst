@@ -38,6 +38,8 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 		public Ps3ConsoleView(EmulatorConfig config, MainWindow main)
 		{
 			_emulatorConfig = config;
+			_currentSelectedUserId = config.LastSelectedUserId ?? 1;
+			_videoVariant = config.BackgroundVideoName ?? "deep-blue";
 
 			_mainWindow = main;
 
@@ -69,6 +71,9 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 			Log("Starting media streams");
 			StartBackgroundVideo();
 			StartBackgroundAudio();
+
+			BackgroundAudio.Volume = _emulatorConfig.AmbientVolume;
+			InputAudio.Volume = _emulatorConfig.MovementVolume;
 
 			KeyDown += OnKeyDown;
 
@@ -182,6 +187,16 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 							{
 								Name = "Install Firmware",
 								CoverImagePath = GetResource("Icons", "core-disk-options.png")
+							},
+							new XmbItem
+							{
+								Name = "Ambient Volume",
+								CoverImagePath = GetResource("Icons", "database.png")
+							},
+							new XmbItem
+							{
+								Name = "Movement Volume",
+								CoverImagePath = GetResource("Icons", "database.png")
 							}
 						]);
 
@@ -286,12 +301,28 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 				return;
 			}
 
+			if (BackgroundVideoSelector.IsOpen) return; // vertical list - Left/Right don't apply
+
+			if (VolumeAdjuster.IsOpen)
+			{
+				VolumeAdjuster.Adjust(delta * 0.05);
+				return;
+			}
+
 			SelectCategory(_categoryIndex + delta);
 		}
 
 		public void MoveVertical(int delta)
 		{
 			if (ScreenshotViewer.IsOpen) return; // nothing to browse vertically in the photo viewer
+
+			if (BackgroundVideoSelector.IsOpen)
+			{
+				BackgroundVideoSelector.MoveVertical(delta);
+				return;
+			}
+
+			if (VolumeAdjuster.IsOpen) return; // a slider - Up/Down don't apply
 
 			SelectItem(_itemIndex + delta);
 		}
@@ -321,7 +352,9 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 		{
 			ChangeVideo = 0,
 			ReloadData = 1,
-			InstallFirmware = 2
+			InstallFirmware = 2,
+			ChangeAmbientVolume = 3,
+			ChangeMovementVolume = 4
 		}
 
 		public async void ActivateSelected()
@@ -329,6 +362,19 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 			Log("Activating selection");
 			if (ScreenshotViewer.IsOpen) return;
 			if (_mainWindow.CatalystMessageBoxControl.IsOpen) return;
+
+			if (BackgroundVideoSelector.IsOpen)
+			{
+				BackgroundVideoSelector.ActivateSelected();
+				return;
+			}
+
+			if (VolumeAdjuster.IsOpen)
+			{
+				VolumeAdjuster.ConfirmSelected();
+				return;
+			}
+
 			if (CurrentItems.Count == 0) return;
 
 			XmbItem? currentItem = CurrentItems.FirstOrDefault(x => x.IsSelected);
@@ -363,7 +409,12 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 				CatalystMessageBoxResult result = await _mainWindow.CatalystMessageBoxControl.ShowAsync("ERROR", "Failed to parse user_id, please contact support.", icon: CatalystMessageBoxIcon.Error);
 				_ = result;
 			}
-			else UpdateActiveUserIndicator();
+			else
+			{
+				UpdateActiveUserIndicator();
+				_emulatorConfig.LastSelectedUserId = _currentSelectedUserId;
+				PersistConfig();
+			}
 		}
 
 		private async Task ActivateGameAsync(XmbItem currentItem)
@@ -420,10 +471,41 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 		{
 			switch ((XmbSubCategoryState)_itemIndex)
 			{
-				case XmbSubCategoryState.ChangeVideo: break;
+				case XmbSubCategoryState.ChangeVideo:
+					string videosFolder = Path.Combine(BaseDirectory, "Resources", "ps3", "Backgrounds");
+					string? chosenVariant = await BackgroundVideoSelector.ShowAsync(VideoVariantFileNames, videosFolder, _videoVariant);
+					if (chosenVariant is null) break; // cancelled
+
+					_videoVariant = chosenVariant;
+					StopBackgroundVideo();
+					StartBackgroundVideo();
+
+					_emulatorConfig.BackgroundVideoName = _videoVariant;
+					PersistConfig();
+					break;
+
 				case XmbSubCategoryState.ReloadData:
 					ReloadCategories();
 					break;
+
+				case XmbSubCategoryState.ChangeAmbientVolume:
+					double? ambientResult = await VolumeAdjuster.ShowAsync("Ambient Volume", BackgroundAudio.Volume);
+					if (ambientResult is null) break; // cancelled
+
+					BackgroundAudio.Volume = ambientResult.Value;
+					_emulatorConfig.AmbientVolume = ambientResult.Value;
+					PersistConfig();
+					break;
+
+				case XmbSubCategoryState.ChangeMovementVolume:
+					double? movementResult = await VolumeAdjuster.ShowAsync("Movement Volume", InputAudio.Volume);
+					if (movementResult is null) break; // cancelled
+
+					InputAudio.Volume = movementResult.Value;
+					_emulatorConfig.MovementVolume = movementResult.Value;
+					PersistConfig();
+					break;
+
 				case XmbSubCategoryState.InstallFirmware:
 					CatalystMessageBoxResult confirm = await _mainWindow.CatalystMessageBoxControl.ShowAsync("Install Firmware", "Installing a firmware requires keyboard input, do you wish to proceed.", icon: CatalystMessageBoxIcon.Question, buttons: CatalystMessageBoxButtons.YesNo);
 					if (confirm != CatalystMessageBoxResult.Yes) return;
@@ -484,6 +566,18 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 				return true;
 			}
 
+			if (BackgroundVideoSelector.IsOpen)
+			{
+				BackgroundVideoSelector.Close();
+				return true;
+			}
+
+			if (VolumeAdjuster.IsOpen)
+			{
+				VolumeAdjuster.Close();
+				return true;
+			}
+
 			if (_mainWindow.CatalystMessageBoxControl.IsOpen)
 			{
 				_mainWindow.CatalystMessageBoxControl.RequestCancel();
@@ -503,7 +597,7 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 			}));
 		}
 
-		private const string VideoVariant = "deep-blue";
+		private string _videoVariant = "deep-blue";
 
 		private static readonly Dictionary<string, string> VideoVariantFileNames = new()
 		{
@@ -519,11 +613,28 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 
 		private const string AudioFileName = "ps3-xmb-audio.m4a";
 
+		/// <summary>
+		/// Saves _emulatorConfig's current field values back to
+		/// %AppData%\ProjectCatalyst\emulators.json, replacing whichever
+		/// entry matches its Id. Call this any time a setting on
+		/// _emulatorConfig changes (background video, volumes, last user).
+		/// </summary>
+		private void PersistConfig()
+		{
+			List<EmulatorConfig> configs = EmulatorConfigStore.Load();
+			int index = configs.FindIndex(c => c.Id == _emulatorConfig.Id);
+
+			if (index >= 0) configs[index] = _emulatorConfig;
+			else configs.Add(_emulatorConfig);
+
+			EmulatorConfigStore.Save(configs);
+		}
+
 		private void StartBackgroundVideo()
 		{
 			try
 			{
-				if (!VideoVariantFileNames.TryGetValue(VideoVariant, out string? fileName))
+				if (!VideoVariantFileNames.TryGetValue(_videoVariant, out string? fileName))
 				{
 					LogError("Unknown video variant.");
 					return;

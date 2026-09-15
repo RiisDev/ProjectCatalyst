@@ -1,0 +1,53 @@
+<UserControl x:Class="ProjectCatalyst.Views.Consoles.Ps3.BackgroundVideoSelectorOverlay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="1080" d:DesignWidth="1920"
+             Focusable="True"
+             KeyDown="OnKeyDown">
+
+    <Grid>
+        <Border x:Name="Backdrop" Background="#CC05070D" Opacity="0" />
+
+        <Border x:Name="Card"
+                Background="{StaticResource PanelBrush}"
+                BorderBrush="{StaticResource PanelBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="20"
+                Width="720"
+                MaxHeight="820"
+                Padding="36,32"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Opacity="0"
+                RenderTransformOrigin="0.5,0.5">
+            <Border.Effect>
+                <DropShadowEffect Color="Black" Direction="270" ShadowDepth="10" BlurRadius="40" Opacity="0.5" />
+            </Border.Effect>
+            <Border.RenderTransform>
+                <ScaleTransform x:Name="CardScale" ScaleX="0.94" ScaleY="0.94" />
+            </Border.RenderTransform>
+
+            <StackPanel>
+                <TextBlock Text="Background Video" Style="{StaticResource TitleText}" FontSize="28" Margin="0,0,0,4" />
+                <TextBlock Text="Choose the ambient background for the XMB."
+                           Style="{StaticResource SubtitleText}" Margin="0,0,0,20" />
+
+                <!-- Rows (thumbnail + name per option) are built in
+                     code-behind, since each needs its own live, looping
+                     MediaElement preview - not something a plain
+                     DataTemplate binding handles cleanly. -->
+                <ScrollViewer MaxHeight="560" VerticalScrollBarVisibility="Auto">
+                    <StackPanel x:Name="OptionsPanel" />
+                </ScrollViewer>
+
+                <TextBlock Text="&#x2191; &#x2193; Browse    Enter / A  Select    Esc / B  Cancel"
+                           Style="{StaticResource HintText}"
+                           HorizontalAlignment="Center"
+                           Margin="0,20,0,0" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>
