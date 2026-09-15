@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
@@ -634,7 +633,7 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine(ex);
+				LogError($"Failed to start background video: {ex}");
 				BackgroundVideo.Visibility = Visibility.Collapsed;
 			}
 		}
@@ -672,7 +671,10 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 				BackgroundAudio.Source = new Uri(audioPath, UriKind.Absolute);
 				BackgroundAudio.Play();
 			}
-			catch (Exception) { /**/ }
+			catch (Exception ex)
+			{
+				LogError($"Failed to start background audio: {ex}");
+			}
 		}
 
 		private void StopBackgroundAudio()
@@ -692,34 +694,41 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 
 		public void PlayDirectionalAudio(Key key = default, GamepadButton gKey = default)
 		{
-			if (gKey != default && gKey != GamepadButton.None)
+			try
 			{
-				InputAudio.Source = gKey switch
+				if (gKey != default && gKey != GamepadButton.None)
 				{
-					GamepadButton.DPadLeft => new Uri(GetResource("Sounds", "cancel.wav"), UriKind.Absolute),
-					GamepadButton.DPadRight => new Uri(GetResource("Sounds", "cancel.wav"), UriKind.Absolute),
-					GamepadButton.DPadUp => new Uri(GetResource("Sounds", "up.wav"), UriKind.Absolute),
-					GamepadButton.DPadDown => new Uri(GetResource("Sounds", "down.wav"), UriKind.Absolute),
-					GamepadButton.Accept => new Uri(GetResource("Sounds", "ok.wav"), UriKind.Absolute),
-					GamepadButton.Back => new Uri(GetResource("Sounds", "cancel.wav"), UriKind.Absolute),
-					_ => InputAudio.Source
-				};
-			}
-			else if (key != default && key != Key.None)
-			{
-				InputAudio.Source = key switch
+					InputAudio.Source = gKey switch
+					{
+						GamepadButton.DPadLeft => new Uri(GetResource("Sounds", "cancel.wav"), UriKind.Absolute),
+						GamepadButton.DPadRight => new Uri(GetResource("Sounds", "cancel.wav"), UriKind.Absolute),
+						GamepadButton.DPadUp => new Uri(GetResource("Sounds", "up.wav"), UriKind.Absolute),
+						GamepadButton.DPadDown => new Uri(GetResource("Sounds", "down.wav"), UriKind.Absolute),
+						GamepadButton.Accept => new Uri(GetResource("Sounds", "ok.wav"), UriKind.Absolute),
+						GamepadButton.Back => new Uri(GetResource("Sounds", "cancel.wav"), UriKind.Absolute),
+						_ => InputAudio.Source
+					};
+				}
+				else if (key != default && key != Key.None)
 				{
-					Key.Left or Key.Right => new Uri(GetResource("Sounds", "cancel.wav"), UriKind.Absolute),
-					Key.Up => new Uri(GetResource("Sounds", "up.wav"), UriKind.Absolute),
-					Key.Down => new Uri(GetResource("Sounds", "down.wav"), UriKind.Absolute),
-					Key.Enter or Key.Space => new Uri(GetResource("Sounds", "ok.wav"), UriKind.Absolute),
-					Key.Escape => new Uri(GetResource("Sounds", "cancel.wav"), UriKind.Absolute),
-					_ => InputAudio.Source
-				};
-			}
-			else throw new InvalidOperationException($"Somehow directional was called {key} | {gKey}");
+					InputAudio.Source = key switch
+					{
+						Key.Left or Key.Right => new Uri(GetResource("Sounds", "cancel.wav"), UriKind.Absolute),
+						Key.Up => new Uri(GetResource("Sounds", "up.wav"), UriKind.Absolute),
+						Key.Down => new Uri(GetResource("Sounds", "down.wav"), UriKind.Absolute),
+						Key.Enter or Key.Space => new Uri(GetResource("Sounds", "ok.wav"), UriKind.Absolute),
+						Key.Escape => new Uri(GetResource("Sounds", "cancel.wav"), UriKind.Absolute),
+						_ => InputAudio.Source
+					};
+				}
+				else throw new InvalidOperationException($"Somehow directional was called {key} | {gKey}");
 
-			InputAudio.Play();
+				InputAudio.Play();
+			}
+			catch (Exception ex)
+			{
+				LogError($"Failed to play directional audio: {ex}");
+			}
 		}
 
 		private void OnKeyDown(object sender, KeyEventArgs e)
