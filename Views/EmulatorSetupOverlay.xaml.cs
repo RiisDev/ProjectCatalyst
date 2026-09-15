@@ -125,7 +125,7 @@ namespace ProjectCatalyst.Views
 			if (EmulatorCombo.SelectedItem is not EmulatorDefinition definition || definition.Detector is null) return;
 
 			if (string.Equals(Path.GetExtension(path), ".AppImage", StringComparison.OrdinalIgnoreCase))
-				await ExecutableRunner.EnsureAppImageDataLink(path);
+				await ExecutableRunner.EnsureAppImageDataLink();
 
 			// Only fill fields the user hasn't manually set themselves - either
 			// still blank, or previously auto-filled and not edited since.

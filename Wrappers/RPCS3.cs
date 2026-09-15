@@ -35,7 +35,9 @@ namespace ProjectCatalyst.Wrappers
 
 		public RPCS3(string executablePath)
 		{
-			_path = Path.GetDirectoryName(executablePath) ?? throw new ArgumentException("Executable path has no parent directory.", nameof(executablePath));
+			_path = string.Equals(Path.GetExtension(executablePath), ".AppImage", StringComparison.OrdinalIgnoreCase)
+				? Path.Combine(BaseDirectory, "Resources", "linux", "rpcs3")
+				: Path.GetDirectoryName(executablePath) ?? throw new ArgumentException("Executable path has no parent directory.", nameof(executablePath));
 
 			Executable = executablePath;
 			DevFlash = Path.Combine(_path, "dev_flash");

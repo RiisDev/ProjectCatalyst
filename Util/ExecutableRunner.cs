@@ -14,7 +14,7 @@ namespace ProjectCatalyst.Util
 			catch {/**/}
 		}
 
-		public static async Task EnsureAppImageDataLink(string appImagePath)
+		public static async Task EnsureAppImageDataLink()
 		{
 			try
 			{
@@ -23,7 +23,6 @@ namespace ProjectCatalyst.Util
 					StartInfo = new ProcessStartInfo
 					{
 						FileName = @"Z:\bin\sh",
-						RedirectStandardOutput = true,
 						RedirectStandardError = true,
 						UseShellExecute = false,
 						CreateNoWindow = true
@@ -31,13 +30,21 @@ namespace ProjectCatalyst.Util
 				};
 
 				process.StartInfo.ArgumentList.Add(AppImageLinkScript);
-				process.StartInfo.ArgumentList.Add(appImagePath);
 
 				process.Start();
 
-				string stderr = await process.StandardError.ReadToEndAsync();
-				await process.WaitForExitAsync();
+				Task<string> stderrTask = process.StandardError.ReadToEndAsync();
 
+				try
+				{
+					await process.WaitForExitAsync();
+				}
+				catch (InvalidOperationException)
+				{
+					LogInfo("rpcs3-link-data.sh exit status could not be tracked, the symlink step likely still ran to completion.");
+				}
+
+				string stderr = await stderrTask;
 				if (!string.IsNullOrWhiteSpace(stderr))
 					LogInfo($"[rpcs3-link-data.sh] STDERR: {stderr}");
 			}
@@ -73,34 +80,41 @@ namespace ProjectCatalyst.Util
 
 				process.Start();
 
-				string stdout = await process.StandardOutput.ReadToEndAsync();
-				string stderr = await process.StandardError.ReadToEndAsync();
+				Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
+				Task<string> stderrTask = process.StandardError.ReadToEndAsync();
 
-				TimeSpan timeout = TimeSpan.FromHours(1);
-				Task processTask = process.WaitForExitAsync();
-				Task timeoutTask = Task.Delay(timeout);
-				Task finishedTask = await Task.WhenAny(processTask, timeoutTask);
-
-				if (finishedTask == timeoutTask)
+				try
 				{
-					try
+					TimeSpan timeout = TimeSpan.FromHours(1);
+					Task processTask = process.WaitForExitAsync();
+					Task timeoutTask = Task.Delay(timeout);
+					Task finishedTask = await Task.WhenAny(processTask, timeoutTask);
+
+					if (finishedTask == timeoutTask)
 					{
 						LogError($"{executable} exceeded 1 hour, killing process...");
 						process.Kill(entireProcessTree: true);
 					}
-					catch (Exception ex)
+					else
 					{
-						LogError(ex.ToString(), $"Error while trying to kill {executable} process.");
+						await processTask;
+						LogInfo($"[{executable}] completed normally, exit code {process.ExitCode}.");
 					}
 				}
-				else
+				catch (InvalidOperationException)
 				{
-					LogInfo($"[{executable}] completed normally.");
+					LogInfo($"[{executable}] exit status could not be tracked.");
 				}
+				catch (Exception ex)
+				{
+					LogError($"Error while waiting for {executable} to exit: {ex}");
+				}
+
+				string stdout = await stdoutTask;
+				string stderr = await stderrTask;
 
 				LogInfo($"[{executable}] STDOUT: {stdout}");
 				LogInfo($"[{executable}] STDERR: {stderr}");
-				LogInfo($"[{executable}] Process exited with code {process.ExitCode}");
 			}
 			catch (Exception ex)
 			{

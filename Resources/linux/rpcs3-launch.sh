@@ -5,7 +5,7 @@ WIN_APPIMAGE="$1"
 shift
 
 SCRIPT_DIR=$(dirname "$0")
-sh "$SCRIPT_DIR/rpcs3-link-data.sh" "$WIN_APPIMAGE"
+sh "$SCRIPT_DIR/rpcs3-link-data.sh"
 
 if command -v winepath >/dev/null 2>&1; then
 	APPIMAGE=$(winepath -u "$WIN_APPIMAGE")
