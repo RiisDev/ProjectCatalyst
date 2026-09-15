@@ -59,8 +59,11 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 
 			_mainWindow = main;
 
+			bool isAppImage = string.Equals(Path.GetExtension(_emulatorConfig.ExecutablePath), ".AppImage", StringComparison.OrdinalIgnoreCase);
+			string? dataDirectory = isAppImage && !string.IsNullOrWhiteSpace(_emulatorConfig.UsersDirectory) ? _emulatorConfig.UsersDirectory : null;
+
 			Log($"Starting RPCS3 wrapper with: {_emulatorConfig.ExecutablePath}");
-			RPCS3 = new RPCS3(_emulatorConfig.ExecutablePath);
+			RPCS3 = new RPCS3(_emulatorConfig.ExecutablePath, dataDirectory);
 
 			Log("Building interface");
 			InitializeComponent();
@@ -141,11 +144,11 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 		{
 			try
 			{
-				string executableName = Path.GetFileName(_emulatorConfig.ExecutablePath);
+				string executableName = Path.GetFileNameWithoutExtension(_emulatorConfig.ExecutablePath);
 
 				switch (executableName)
 				{
-					case "rpcs3.exe":
+					case var name when name.StartsWith("rpcs3", StringComparison.OrdinalIgnoreCase):
 						XmbCategory userCategory = new()
 							{ Name = "Users", IconPath = GetResource("Icons", "menu_quickmenu.png") };
 						XmbCategory gamesCategory = new()

@@ -31,9 +31,11 @@ namespace ProjectCatalyst.Wrappers
 		public readonly string GameIcons;
 		public readonly string Games;
 
-		public RPCS3(string executablePath)
+		public RPCS3(string executablePath, string? dataDirectory = null)
 		{
-			_path = Path.GetDirectoryName(executablePath) ?? throw new ArgumentException("Executable path has no parent directory.", nameof(executablePath));
+			_path = string.IsNullOrWhiteSpace(dataDirectory)
+				? Path.GetDirectoryName(executablePath) ?? throw new ArgumentException("Executable path has no parent directory.", nameof(executablePath))
+				: dataDirectory;
 
 			Executable = executablePath;
 			DevFlash = Path.Combine(_path, "dev_flash");

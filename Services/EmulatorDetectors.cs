@@ -36,9 +36,13 @@ namespace ProjectCatalyst.Services
 		private static string? LinuxRpcs3ConfigDirectory()
 		{
 			string? home = Environment.GetEnvironmentVariable("HOME");
-			return string.IsNullOrWhiteSpace(home)
+			if (!string.IsNullOrWhiteSpace(home))
+				return "Z:" + Path.Combine(home, ".config", "rpcs3").Replace('/', '\\');
+
+			string? userName = Environment.UserName;
+			return string.IsNullOrWhiteSpace(userName)
 				? null
-				: "Z:" + Path.Combine(home, ".config", "rpcs3").Replace('/', '\\');
+				: $"Z:\\home\\{userName}\\.config\\rpcs3";
 		}
 	}
 
