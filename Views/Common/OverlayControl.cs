@@ -80,7 +80,7 @@ namespace ProjectCatalyst.Views.Common
 		public Task<T> Begin(T abandonedResult = default!)
 		{
 			_tcs?.TrySetResult(abandonedResult);
-			_tcs = new TaskCompletionSource<T>();
+			_tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
 			return _tcs.Task;
 		}
 
