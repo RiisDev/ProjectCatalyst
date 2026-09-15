@@ -319,7 +319,7 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 				return;
 			}
 
-			if (BackgroundVideoSelector.IsOpen) return; // vertical list - Left/Right don't apply
+			if (BackgroundVideoSelector.IsOpen) return; 
 
 			if (VolumeAdjuster.IsOpen)
 			{
@@ -332,7 +332,7 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 
 		public void MoveVertical(int delta)
 		{
-			if (ScreenshotViewer.IsOpen) return; // nothing to browse vertically in the photo viewer
+			if (ScreenshotViewer.IsOpen) return;
 
 			if (BackgroundVideoSelector.IsOpen)
 			{
@@ -340,7 +340,7 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 				return;
 			}
 
-			if (VolumeAdjuster.IsOpen) return; // a slider - Up/Down don't apply
+			if (VolumeAdjuster.IsOpen) return;
 
 			SelectItem(_itemIndex + delta);
 		}
@@ -606,12 +606,6 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 			}));
 		}
 
-		/// <summary>
-		/// Saves _emulatorConfig's current field values back to
-		/// %AppData%\ProjectCatalyst\emulators.json, replacing whichever
-		/// entry matches its Id. Call this any time a setting on
-		/// _emulatorConfig changes (background video, volumes, last user).
-		/// </summary>
 		private void PersistConfig()
 		{
 			List<EmulatorConfig> configs = EmulatorConfigStore.Load();

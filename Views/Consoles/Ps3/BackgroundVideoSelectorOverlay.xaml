@@ -36,10 +36,6 @@
                 <TextBlock Text="Choose the ambient background for the XMB."
                            Style="{StaticResource SubtitleText}" Margin="0,0,0,20" />
 
-                <!-- Rows (thumbnail + name per option) are built in
-                     code-behind, since each needs its own live, looping
-                     MediaElement preview - not something a plain
-                     DataTemplate binding handles cleanly. -->
                 <ScrollViewer x:Name="OptionsScroll" MaxHeight="560" VerticalScrollBarVisibility="Hidden">
                     <StackPanel x:Name="OptionsPanel" />
                 </ScrollViewer>

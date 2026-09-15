@@ -5,8 +5,6 @@ namespace ProjectCatalyst.Util
 {
 	public static class ExecutableRunner
 	{
-		/// <summary>Kills any running process with this name - a Process.ProcessName value,
-		/// i.e. without a file extension (Process.GetProcessesByName never matches ".exe").</summary>
 		public static void KillClient(string processName)
 		{
 			try { Process.GetProcessesByName(processName).ToList().ForEach(x => x.Kill(true)); }

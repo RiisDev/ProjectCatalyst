@@ -10,8 +10,6 @@ namespace ProjectCatalyst.Models
 		Wii
 	}
 
-	/// <summary>Presentation metadata (launcher tile display name/glyph/accent) for each SystemType,
-	/// single-sourced here instead of re-derived at every call site.</summary>
 	public readonly record struct SystemTypePresentation(string DisplayName, string Glyph, Color AccentColor);
 
 	public static class SystemTypeExtensions

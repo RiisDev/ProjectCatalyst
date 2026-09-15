@@ -7,18 +7,6 @@ using ProjectCatalyst.Views.Common;
 
 namespace ProjectCatalyst.Views.Consoles.Ps3
 {
-	/// <summary>
-	/// Lets the user pick which background video variant plays behind the
-	/// XMB. Each row shows a live, looping, muted thumbnail preview of that
-	/// video (built in code, not XAML - each needs its own MediaElement
-	/// instance with its own loop/lifecycle handling) plus its display name,
-	/// with a highlighted border on whichever one is currently selected.
-	///
-	/// Gamepad-navigable like ScreenshotViewerOverlay: exposes IsOpen,
-	/// MoveVertical, ActivateSelected, and Close for the hosting console
-	/// view to route into, since gamepad input bypasses WPF's normal
-	/// keyboard focus/bubbling entirely.
-	/// </summary>
 	public partial class BackgroundVideoSelectorOverlay : OverlayControl, ICloseableOverlay
 	{
 		private readonly record struct VideoOption(string Key, string DisplayName, string FilePath);
@@ -38,12 +26,6 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 
 		public BackgroundVideoSelectorOverlay() => InitializeComponent();
 
-		/// <summary>
-		/// Opens the selector. variantFileNames maps a stable key (saved to
-		/// EmulatorConfig.BackgroundVideoName) to its filename under
-		/// videosFolder. currentKey pre-selects whichever is already chosen.
-		/// Returns the chosen key, or null if cancelled.
-		/// </summary>
 		public Task<string?> ShowAsync(IReadOnlyDictionary<string, string> variantFileNames, string videosFolder, string? currentKey)
 		{
 			Task<string?> task = _result.Begin();
@@ -169,7 +151,6 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 				_rowBorders[_index].BringIntoView();
 		}
 
-		/// <summary>Browse up/down through the list - clamped, doesn't wrap.</summary>
 		public void MoveVertical(int delta)
 		{
 			if (_options.Count == 0) return;
@@ -177,7 +158,6 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 			UpdateSelectionVisual();
 		}
 
-		/// <summary>Confirms whatever's currently highlighted and closes with that result.</summary>
 		public void ActivateSelected()
 		{
 			if (_options.Count == 0)

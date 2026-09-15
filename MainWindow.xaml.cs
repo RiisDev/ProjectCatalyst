@@ -208,6 +208,8 @@ namespace ProjectCatalyst
 
 			if (first != CatalystMessageBoxResult.Yes) return;
 
+			await Task.Delay(250);
+
 			CatalystMessageBoxResult second = await CatalystMessageBoxControl.ShowAsync(
 				"Are You Absolutely Sure?",
 				"This cannot be undone. Every configured emulator will be removed from Project Catalyst.",
