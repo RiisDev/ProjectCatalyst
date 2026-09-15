@@ -219,6 +219,9 @@ namespace ProjectCatalyst
 			if (second != CatalystMessageBoxResult.Yes) return;
 
 			ClearConfig();
+
+			PlatformSelector.Focus();
+			Keyboard.Focus(PlatformSelector);
 		}
 
 		private void ClearConfig()

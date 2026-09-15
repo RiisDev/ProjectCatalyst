@@ -59,11 +59,8 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 
 			_mainWindow = main;
 
-			bool isAppImage = string.Equals(Path.GetExtension(_emulatorConfig.ExecutablePath), ".AppImage", StringComparison.OrdinalIgnoreCase);
-			string? dataDirectory = isAppImage && !string.IsNullOrWhiteSpace(_emulatorConfig.UsersDirectory) ? _emulatorConfig.UsersDirectory : null;
-
 			Log($"Starting RPCS3 wrapper with: {_emulatorConfig.ExecutablePath}");
-			RPCS3 = new RPCS3(_emulatorConfig.ExecutablePath, dataDirectory);
+			RPCS3 = new RPCS3(_emulatorConfig.ExecutablePath);
 
 			Log("Building interface");
 			InitializeComponent();
@@ -656,6 +653,7 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 
 		private void OnBackgroundVideoFailed(object sender, ExceptionRoutedEventArgs e)
 		{
+			LogError($"Failed to load video: {e.ErrorException}");
 			BackgroundVideo.Visibility = Visibility.Collapsed;
 		}
 
@@ -689,7 +687,7 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 			BackgroundAudio.Play();
 		}
 
-		private void OnBackgroundAudioFailed(object sender, ExceptionRoutedEventArgs e) => Debug.WriteLine($"Failed to load audio: {e.ErrorException}");
+		private void OnBackgroundAudioFailed(object sender, ExceptionRoutedEventArgs e) => LogError($"Failed to load audio: {e.ErrorException}");
 
 
 		public void PlayDirectionalAudio(Key key = default, GamepadButton gKey = default)

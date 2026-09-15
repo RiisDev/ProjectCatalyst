@@ -23,27 +23,9 @@ namespace ProjectCatalyst.Services
 
 	public sealed class Rpcs3Detector : IEmulatorDetector
 	{
-		public string? TryDetectUsersDirectory(string executablePath)
-		{
-			if (string.Equals(Path.GetExtension(executablePath), ".AppImage", StringComparison.OrdinalIgnoreCase))
-				return LinuxRpcs3ConfigDirectory();
-
-			return DetectorHelpers.FindNearExecutable(executablePath, @"dev_hdd0\home");
-		}
+		public string? TryDetectUsersDirectory(string executablePath) => DetectorHelpers.FindNearExecutable(executablePath, @"dev_hdd0\home");
 
 		public string? TryDetectGamesDirectory(string executablePath) => DetectorHelpers.FindNearExecutable(executablePath, "games");
-
-		private static string? LinuxRpcs3ConfigDirectory()
-		{
-			string? home = Environment.GetEnvironmentVariable("HOME");
-			if (!string.IsNullOrWhiteSpace(home))
-				return "Z:" + Path.Combine(home, ".config", "rpcs3").Replace('/', '\\');
-
-			string? userName = Environment.UserName;
-			return string.IsNullOrWhiteSpace(userName)
-				? null
-				: $"Z:\\home\\{userName}\\.config\\rpcs3";
-		}
 	}
 
 	public sealed class DolphinDetector : IEmulatorDetector

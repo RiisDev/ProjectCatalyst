@@ -31,11 +31,11 @@ namespace ProjectCatalyst.Wrappers
 		public readonly string GameIcons;
 		public readonly string Games;
 
-		public RPCS3(string executablePath, string? dataDirectory = null)
+		private const string ProcessName = "rpcs3";
+
+		public RPCS3(string executablePath)
 		{
-			_path = string.IsNullOrWhiteSpace(dataDirectory)
-				? Path.GetDirectoryName(executablePath) ?? throw new ArgumentException("Executable path has no parent directory.", nameof(executablePath))
-				: dataDirectory;
+			_path = Path.GetDirectoryName(executablePath) ?? throw new ArgumentException("Executable path has no parent directory.", nameof(executablePath));
 
 			Executable = executablePath;
 			DevFlash = Path.Combine(_path, "dev_flash");
@@ -104,7 +104,7 @@ namespace ProjectCatalyst.Wrappers
 					throw new InvalidOperationException("Missing firmware");
 
 				OverwriteWelcomeBox();
-				ExecutableRunner.KillClient(Path.GetFileNameWithoutExtension(Executable));
+				ExecutableRunner.KillClient(ProcessName);
 
 				string user = userId.ToString().PadLeft(8, '0');
 
@@ -124,7 +124,7 @@ namespace ProjectCatalyst.Wrappers
 					throw new InvalidOperationException("Missing firmware");
 
 				OverwriteWelcomeBox();
-				ExecutableRunner.KillClient(Path.GetFileNameWithoutExtension(Executable));
+				ExecutableRunner.KillClient(ProcessName);
 				await ExecutableRunner.RunExecutable(Executable, ["--no-gui", "--fullscreen", game.InstallLocation]);
 			}
 			catch (Exception ex)
@@ -140,7 +140,7 @@ namespace ProjectCatalyst.Wrappers
 			try
 			{
 				if (IsFirmwareInstalled() && !forceInstall) return;
-				ExecutableRunner.KillClient(Path.GetFileNameWithoutExtension(Executable));
+				ExecutableRunner.KillClient(ProcessName);
 				await ExecutableRunner.RunExecutable(Executable, ["--headless", "--installfw", firmware]);
 			}
 			catch (Exception ex)

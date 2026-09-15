@@ -5,13 +5,16 @@ namespace ProjectCatalyst.Util
 {
 	public static class ExecutableRunner
 	{
+		private static readonly string AppImageLaunchScript = Path.Combine(BaseDirectory, "Resources", "linux", "rpcs3-launch.sh");
+		private static readonly string AppImageLinkScript = Path.Combine(BaseDirectory, "Resources", "linux", "rpcs3-link-data.sh");
+
 		public static void KillClient(string processName)
 		{
 			try { Process.GetProcessesByName(processName).ToList().ForEach(x => x.Kill(true)); }
 			catch {/**/}
 		}
 
-		public static async Task RunExecutable(string executable, string[] arguments)
+		public static async Task EnsureAppImageDataLink(string appImagePath)
 		{
 			try
 			{
@@ -19,7 +22,44 @@ namespace ProjectCatalyst.Util
 				{
 					StartInfo = new ProcessStartInfo
 					{
-						FileName = executable,
+						FileName = @"Z:\bin\sh",
+						RedirectStandardOutput = true,
+						RedirectStandardError = true,
+						UseShellExecute = false,
+						CreateNoWindow = true
+					}
+				};
+
+				process.StartInfo.ArgumentList.Add(AppImageLinkScript);
+				process.StartInfo.ArgumentList.Add(appImagePath);
+
+				process.Start();
+
+				string stderr = await process.StandardError.ReadToEndAsync();
+				await process.WaitForExitAsync();
+
+				if (!string.IsNullOrWhiteSpace(stderr))
+					LogInfo($"[rpcs3-link-data.sh] STDERR: {stderr}");
+			}
+			catch (Exception ex)
+			{
+				LogError(ex.ToString());
+			}
+		}
+
+		public static async Task RunExecutable(string executable, string[] arguments)
+		{
+			try
+			{
+				(string fileName, string[] launchArguments) = string.Equals(Path.GetExtension(executable), ".AppImage", StringComparison.OrdinalIgnoreCase)
+					? (@"Z:\bin\sh", [AppImageLaunchScript, executable, .. arguments])
+					: (executable, arguments);
+
+				Process process = new()
+				{
+					StartInfo = new ProcessStartInfo
+					{
+						FileName = fileName,
 						RedirectStandardOutput = true,
 						RedirectStandardError = true,
 						UseShellExecute = false,
@@ -28,7 +68,7 @@ namespace ProjectCatalyst.Util
 					}
 				};
 
-				foreach (string arg in arguments)
+				foreach (string arg in launchArguments)
 					process.StartInfo.ArgumentList.Add(arg);
 
 				process.Start();

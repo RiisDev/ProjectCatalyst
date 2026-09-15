@@ -5,6 +5,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using Microsoft.Win32;
 using ProjectCatalyst.Models;
+using ProjectCatalyst.Util;
 using ProjectCatalyst.Views.Common;
 
 namespace ProjectCatalyst.Views
@@ -117,11 +118,14 @@ namespace ProjectCatalyst.Views
 			return false;
 		}
 
-		private void OnExecutablePathChanged(object sender, TextChangedEventArgs e)
+		private async void OnExecutablePathChanged(object sender, TextChangedEventArgs e)
 		{
 			string path = ExecutablePathBox.Text;
 			if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
 			if (EmulatorCombo.SelectedItem is not EmulatorDefinition definition || definition.Detector is null) return;
+
+			if (string.Equals(Path.GetExtension(path), ".AppImage", StringComparison.OrdinalIgnoreCase))
+				await ExecutableRunner.EnsureAppImageDataLink(path);
 
 			// Only fill fields the user hasn't manually set themselves - either
 			// still blank, or previously auto-filled and not edited since.
