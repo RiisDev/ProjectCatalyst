@@ -1,10 +1,9 @@
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using System.Windows.Media;
+using ProjectCatalyst.Views.Common;
 
 namespace ProjectCatalyst.Views.Consoles.Internals
 {
-	public sealed class XmbItem : INotifyPropertyChanged
+	public sealed class XmbItem : ObservableObject
 	{
 		public required string Name { get; init; }
 		public string Subtitle { get; init; } = string.Empty;
@@ -39,12 +38,9 @@ namespace ProjectCatalyst.Views.Consoles.Internals
 			}
 		}
 
-		public event PropertyChangedEventHandler? PropertyChanged;
-		private void OnPropertyChanged([CallerMemberName] string? name = null)
-			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 	}
 
-	public sealed class XmbCategory : INotifyPropertyChanged
+	public sealed class XmbCategory : ObservableObject
 	{
 		public required string Name { get; init; }
 		public string IconPath { get; init; } = string.Empty;
@@ -60,9 +56,5 @@ namespace ProjectCatalyst.Views.Consoles.Internals
 				OnPropertyChanged();
 			}
 		}
-
-		public event PropertyChangedEventHandler? PropertyChanged;
-		private void OnPropertyChanged([CallerMemberName] string? name = null)
-			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 	}
 }

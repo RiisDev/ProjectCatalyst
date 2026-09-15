@@ -8,6 +8,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using ProjectCatalyst.Models;
 using ProjectCatalyst.Services;
+using ProjectCatalyst.Views.Common;
 using ProjectCatalyst.Views.Consoles.Internals;
 using ProjectCatalyst.Wrappers;
 
@@ -17,8 +18,22 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 	{
 		private const double ItemRowHeight = 70;
 		private const double FocusOffsetFromTop = 24;
+		private const string AudioFileName = "ps3-xmb-audio.m4a";
 
-		private int _currentSelectedUserId = 1;
+		private static readonly Dictionary<string, string> VideoVariantFileNames = new()
+		{
+			["black"] = "ps3-xmb-black.mp4",
+			["brown"] = "ps3-xmb-brown.mp4",
+			["deep-blue"] = "ps3-xmb-deep-blue.mp4",
+			["green"] = "ps3-xmb-green.mp4",
+			["orange"] = "ps3-xmb-orange.mp4",
+			["purple"] = "ps3-xmb-purple.mp4",
+			["red"] = "ps3-xmb-red.mp4",
+			["turquoise"] = "ps3-xmb-turquoise.mp4"
+		};
+
+		private int _currentSelectedUserId;
+		private string _videoVariant;
 
 		private readonly MainWindow _mainWindow;
 
@@ -26,6 +41,7 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 		private readonly List<XmbCategory> _categories;
 		private readonly DispatcherTimer _clockTimer;
 		private readonly int[] _lastItemIndexPerCategory;
+		private readonly ICloseableOverlay[] _backCloseableOverlays;
 		private int _categoryIndex;
 		private int _itemIndex;
 		private double _scrollY;
@@ -44,11 +60,13 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 			_mainWindow = main;
 
 			Log($"Starting RPCS3 wrapper with: {_emulatorConfig.ExecutablePath}");
-			RPCS3 = new RPCS3(Path.GetDirectoryName(_emulatorConfig.ExecutablePath)!);
+			RPCS3 = new RPCS3(_emulatorConfig.ExecutablePath);
 
 			Log("Building interface");
 			InitializeComponent();
-			
+
+			_backCloseableOverlays = [ScreenshotViewer, FirmwareInstaller, CreateUserOverlay, BackgroundVideoSelector, VolumeAdjuster];
+
 			Log("Building categories");
 			_categories = BuildCategories();
 			_lastItemIndexPerCategory = new int[_categories.Count];
@@ -467,6 +485,21 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 			FocusDefault();
 		}
 
+		private async Task WaitForExitConnection()
+		{
+			string path = Path.Combine(Path.GetDirectoryName(_emulatorConfig.ExecutablePath)!, "log", "RPCS3.log");
+			while (true)
+			{
+				try
+				{
+					string text = await RPCS3.ReadLogTextAsync(path);
+					if (text.Contains("SYS: Requesting game to exit") ) { break; }
+				}
+				catch { /**/ }
+				await Task.Delay(250);
+			}
+		}
+
 		private async Task ActivateSystemItemAsync()
 		{
 			switch ((XmbSubCategoryState)_itemIndex)
@@ -548,33 +581,10 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 
 		public bool TryHandleBack()
 		{
-			if (ScreenshotViewer.IsOpen)
+			ICloseableOverlay? openOverlay = Array.Find(_backCloseableOverlays, o => o.IsOpen);
+			if (openOverlay is not null)
 			{
-				ScreenshotViewer.Close();
-				return true;
-			}
-
-			if (FirmwareInstaller.IsOpen)
-			{
-				FirmwareInstaller.Close();
-				return true;
-			}
-
-			if (CreateUserOverlay.IsOpen)
-			{
-				CreateUserOverlay.Close();
-				return true;
-			}
-
-			if (BackgroundVideoSelector.IsOpen)
-			{
-				BackgroundVideoSelector.Close();
-				return true;
-			}
-
-			if (VolumeAdjuster.IsOpen)
-			{
-				VolumeAdjuster.Close();
+				openOverlay.Close();
 				return true;
 			}
 
@@ -583,7 +593,6 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 				_mainWindow.CatalystMessageBoxControl.RequestCancel();
 				return true;
 			}
-
 
 			return false;
 		}
@@ -596,22 +605,6 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 				Keyboard.Focus(this);
 			}));
 		}
-
-		private string _videoVariant = "deep-blue";
-
-		private static readonly Dictionary<string, string> VideoVariantFileNames = new()
-		{
-			["black"] = "ps3-xmb-black.mp4",
-			["brown"] = "ps3-xmb-brown.mp4",
-			["deep-blue"] = "ps3-xmb-deep-blue.mp4",
-			["green"] = "ps3-xmb-green.mp4",
-			["orange"] = "ps3-xmb-orange.mp4",
-			["purple"] = "ps3-xmb-purple.mp4",
-			["red"] = "ps3-xmb-red.mp4",
-			["turquoise"] = "ps3-xmb-turquoise.mp4"
-		};
-
-		private const string AudioFileName = "ps3-xmb-audio.m4a";
 
 		/// <summary>
 		/// Saves _emulatorConfig's current field values back to
@@ -775,21 +768,6 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 
 			if (e.Handled)
 				PlayDirectionalAudio(e.Key);
-		}
-
-		private async Task WaitForExitConnection()
-		{
-			string path = Path.Combine(Path.GetDirectoryName(_emulatorConfig.ExecutablePath)!, "log", "RPCS3.log");
-			while (true)
-			{
-				try
-				{
-					string text = await RPCS3.ReadLogTextAsync(path);
-					if (text.Contains("SYS: Requesting game to exit") ) { break; }
-				}
-				catch { /**/ }
-				await Task.Delay(250);
-			}
 		}
 	}
 }

@@ -3,23 +3,23 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
-using System.Windows.Threading;
+using ProjectCatalyst.Views.Common;
 
 namespace ProjectCatalyst.Views.Consoles.Ps3
 {
-	public partial class ScreenshotViewerOverlay : UserControl
+	public partial class ScreenshotViewerOverlay : OverlayControl, ICloseableOverlay
 	{
 		private IReadOnlyList<string> _imagePaths = [];
 		private int _index;
 
-		public bool IsOpen { get; private set; }
+		protected override UIElement BackdropElement => Backdrop;
+		protected override UIElement CardElement => Card;
+		protected override ScaleTransform CardScaleTransform => CardScale;
 
 		public ScreenshotViewerOverlay()
 		{
 			InitializeComponent();
-			Visibility = Visibility.Collapsed;
 			KeyDown += OnKeyDown;
 		}
 
@@ -33,7 +33,7 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 
 			IsOpen = true;
 			Visibility = Visibility.Visible;
-			AnimateIn();
+			AnimateIn(cardStartScale: 0.96, fadeMs: 180);
 			FocusDefault();
 		}
 
@@ -71,38 +71,6 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 
 			FileNameText.Text = Path.GetFileName(path);
 			PositionText.Text = $"{_index + 1} of {_imagePaths.Count}";
-		}
-
-		public void FocusDefault()
-		{
-			Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
-			{
-				Focus();
-				Keyboard.Focus(this);
-			}));
-		}
-
-		private void AnimateIn()
-		{
-			DoubleAnimation fade = new(0, 1, TimeSpan.FromMilliseconds(180));
-			Backdrop.BeginAnimation(OpacityProperty, fade);
-
-			DoubleAnimation cardFade = new(0, 1, TimeSpan.FromMilliseconds(220));
-			DoubleAnimation cardScale = new(0.96, 1.0, TimeSpan.FromMilliseconds(220))
-			{
-				EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-			};
-			Card.BeginAnimation(OpacityProperty, cardFade);
-			CardScale.BeginAnimation(ScaleTransform.ScaleXProperty, cardScale);
-			CardScale.BeginAnimation(ScaleTransform.ScaleYProperty, cardScale);
-		}
-
-		private void AnimateOut()
-		{
-			DoubleAnimation fadeOut = new(1, 0, TimeSpan.FromMilliseconds(160));
-			fadeOut.Completed += (_, _) => Visibility = Visibility.Collapsed;
-			Backdrop.BeginAnimation(OpacityProperty, fadeOut);
-			Card.BeginAnimation(OpacityProperty, fadeOut);
 		}
 
 		private void OnKeyDown(object sender, KeyEventArgs e)

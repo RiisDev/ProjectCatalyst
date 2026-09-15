@@ -1,11 +1,10 @@
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using System.Windows.Controls;
 using System.Windows.Media;
+using ProjectCatalyst.Views.Common;
 
 namespace ProjectCatalyst.Models
 {
-	public sealed class PlatformItem : INotifyPropertyChanged
+	public sealed class PlatformItem : ObservableObject
 	{
 		public required string Name { get; init; }
 
@@ -37,9 +36,5 @@ namespace ProjectCatalyst.Models
 				OnPropertyChanged();
 			}
 		}
-
-		public event PropertyChangedEventHandler? PropertyChanged;
-
-		private void OnPropertyChanged([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 	}
 }

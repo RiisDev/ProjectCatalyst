@@ -2,8 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Threading;
+using ProjectCatalyst.Views.Common;
 
 namespace ProjectCatalyst.Views.Consoles.Ps3
 {
@@ -18,25 +17,23 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 	/// normal keyboard focus/bubbling entirely (same pattern as
 	/// ScreenshotViewerOverlay / BackgroundVideoSelectorOverlay).
 	/// </summary>
-	public partial class VolumeAdjustOverlay : UserControl
+	public partial class VolumeAdjustOverlay : OverlayControl, ICloseableOverlay
 	{
 		private const double GamepadStep = 0.05;
 
 		private double _value;
-		private TaskCompletionSource<double?>? _tcs;
+		private readonly OverlayResult<double?> _result = new();
 
-		public bool IsOpen { get; private set; }
+		protected override UIElement BackdropElement => Backdrop;
+		protected override UIElement CardElement => Card;
+		protected override ScaleTransform CardScaleTransform => CardScale;
 
-		public VolumeAdjustOverlay()
-		{
-			InitializeComponent();
-			Visibility = Visibility.Collapsed;
-		}
+		public VolumeAdjustOverlay() => InitializeComponent();
 
 		/// <summary>Opens the overlay pre-set to currentValue (0.0-1.0). Returns the confirmed value, or null if cancelled.</summary>
 		public Task<double?> ShowAsync(string title, double currentValue)
 		{
-			_tcs = new TaskCompletionSource<double?>();
+			Task<double?> task = _result.Begin();
 
 			TitleTextBlock.Text = title;
 			_value = Math.Clamp(currentValue, 0, 1);
@@ -47,7 +44,7 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 			AnimateIn();
 			FocusDefault();
 
-			return _tcs.Task;
+			return task;
 		}
 
 		/// <summary>Nudges the value by delta (positive or negative), clamped to 0.0-1.0.</summary>
@@ -69,46 +66,10 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 
 		private void Complete(double? result)
 		{
-			if (_tcs is null) return;
+			if (!_result.TryComplete(result)) return;
 
-			TaskCompletionSource<double?> tcs = _tcs;
-			_tcs = null;
 			IsOpen = false;
-
 			AnimateOut();
-			tcs.TrySetResult(result);
-		}
-
-		public void FocusDefault()
-		{
-			Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
-			{
-				Focus();
-				Keyboard.Focus(this);
-			}));
-		}
-
-		private void AnimateIn()
-		{
-			DoubleAnimation fade = new(0, 1, TimeSpan.FromMilliseconds(200));
-			Backdrop.BeginAnimation(OpacityProperty, fade);
-
-			DoubleAnimation cardFade = new(0, 1, TimeSpan.FromMilliseconds(220));
-			DoubleAnimation cardScale = new(0.94, 1.0, TimeSpan.FromMilliseconds(220))
-			{
-				EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-			};
-			Card.BeginAnimation(OpacityProperty, cardFade);
-			CardScale.BeginAnimation(ScaleTransform.ScaleXProperty, cardScale);
-			CardScale.BeginAnimation(ScaleTransform.ScaleYProperty, cardScale);
-		}
-
-		private void AnimateOut()
-		{
-			DoubleAnimation fadeOut = new(1, 0, TimeSpan.FromMilliseconds(160));
-			fadeOut.Completed += (_, _) => Visibility = Visibility.Collapsed;
-			Backdrop.BeginAnimation(OpacityProperty, fadeOut);
-			Card.BeginAnimation(OpacityProperty, fadeOut);
 		}
 
 		private void OnSliderChanged(object sender, RoutedPropertyChangedEventArgs<double> e)

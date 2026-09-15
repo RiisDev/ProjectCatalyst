@@ -3,36 +3,32 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
 using Microsoft.Win32;
-using ProjectCatalyst.Models;
+using ProjectCatalyst.Views.Common;
 
 namespace ProjectCatalyst.Views.Consoles.Ps3
 {
-	public partial class FirmwareInstallOverlay
+	public partial class FirmwareInstallOverlay : OverlayControl, ICloseableOverlay
 	{
-		private TaskCompletionSource<string?>? _tcs;
+		private readonly OverlayResult<string?> _result = new();
 
-		public bool IsOpen { get; private set; }
+		protected override UIElement BackdropElement => Backdrop;
+		protected override UIElement CardElement => Card;
+		protected override ScaleTransform CardScaleTransform => CardScale;
 
-		public FirmwareInstallOverlay()
+		public FirmwareInstallOverlay() => InitializeComponent();
+
+		public Task<string?> ShowAsync()
 		{
-			InitializeComponent();
-			Visibility = Visibility.Collapsed;
-		}
-
-		public Task<string?> ShowAsync(EmulatorConfig? existing = null)
-		{
-			_tcs = new TaskCompletionSource<string?>();
+			Task<string?> task = _result.Begin();
 			ValidationText.Visibility = Visibility.Collapsed;
-
-			UpdateFilePathBox.Text = existing is not null ? existing.ExecutablePath : string.Empty;
+			UpdateFilePathBox.Text = string.Empty;
 
 			IsOpen = true;
 			Visibility = Visibility.Visible;
 			AnimateIn();
 
-			return _tcs.Task;
+			return task;
 		}
 
 		private void OnUpdateFileClick(object sender, RoutedEventArgs e)
@@ -48,13 +44,13 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 				UpdateFilePathBox.Text = dialog.FileName;
 			}
 		}
-		
+
 		private void OnUpdateFilePathChanged(object sender, TextChangedEventArgs e)
 		{
 			string path = UpdateFilePathBox.Text;
 			if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
 			{
-				ShowValidationMessage("File not found");
+				ShowValidationMessage(ValidationText, "File not found");
 			}
 		}
 
@@ -62,61 +58,23 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 		{
 			if (string.IsNullOrWhiteSpace(UpdateFilePathBox.Text) || !File.Exists(UpdateFilePathBox.Text))
 			{
-				ShowValidationMessage("Choose a valid PS3 update file.");
+				ShowValidationMessage(ValidationText, "Choose a valid PS3 update file.");
 				return;
 			}
-			
+
 			Complete(UpdateFilePathBox.Text);
 		}
 
 		private void OnCancelClick(object sender, RoutedEventArgs e) => Complete(null);
 
-		private void ShowValidationMessage(string message)
-		{
-			ValidationText.Text = message;
-			ValidationText.Visibility = Visibility.Visible;
-		}
+		public void Close() => Complete(null);
 
 		private void Complete(string? result)
 		{
-			if (_tcs is null) return;
+			if (!_result.TryComplete(result)) return;
 
-			TaskCompletionSource<string?> tcs = _tcs;
-			_tcs = null;
-			IsOpen = false;
-
-			AnimateOut();
-			tcs.TrySetResult(result);
-		}
-
-		public void Close()
-		{
-			if (!IsOpen) return;
 			IsOpen = false;
 			AnimateOut();
-		}
-
-		private void AnimateIn()
-		{
-			DoubleAnimation fade = new(0, 1, TimeSpan.FromMilliseconds(200));
-			Backdrop.BeginAnimation(OpacityProperty, fade);
-
-			DoubleAnimation cardFade = new(0, 1, TimeSpan.FromMilliseconds(220));
-			DoubleAnimation cardScale = new(0.94, 1.0, TimeSpan.FromMilliseconds(220))
-			{
-				EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-			};
-			Card.BeginAnimation(OpacityProperty, cardFade);
-			CardScale.BeginAnimation(ScaleTransform.ScaleXProperty, cardScale);
-			CardScale.BeginAnimation(ScaleTransform.ScaleYProperty, cardScale);
-		}
-
-		private void AnimateOut()
-		{
-			DoubleAnimation fadeOut = new(1, 0, TimeSpan.FromMilliseconds(160));
-			fadeOut.Completed += (_, _) => Visibility = Visibility.Collapsed;
-			Backdrop.BeginAnimation(OpacityProperty, fadeOut);
-			Card.BeginAnimation(OpacityProperty, fadeOut);
 		}
 
 		private void OnKeyDown(object sender, KeyEventArgs e)

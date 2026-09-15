@@ -39,8 +39,15 @@
 
                     <Button Content="Test Download"
                             Style="{StaticResource CatalystButton}"
-                            Margin="0,0,30,0"
+                            Margin="0,0,16,0"
                             Click="OnTestDownloadClick" />
+
+                    <Button Content="Clear Config"
+                            Style="{StaticResource CatalystButton}"
+                            BorderBrush="{StaticResource ErrorBrush}"
+                            Foreground="{StaticResource ErrorBrush}"
+                            Margin="0,0,30,0"
+                            Click="OnClearConfigClick" />
 
                     <TextBlock x:Name="ClockText"
                                VerticalAlignment="Center"

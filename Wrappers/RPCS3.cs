@@ -4,7 +4,7 @@ using System.Net.NetworkInformation;
 
 namespace ProjectCatalyst.Wrappers
 {
-	public class RPCS3(string path)
+	public class RPCS3
 	{
 		public record Ps3Game(Ps3GameMetadata MetData, string IconLocation, string InstallLocation);
 		public record Ps3User(int UserId, string Username);
@@ -21,13 +21,28 @@ namespace ProjectCatalyst.Wrappers
 		private static readonly string[] RequiredDirectories = ["dev_bdvd", "dev_flash", "dev_flash2", "dev_flash3", "dev_hdd0", "dev_hdd1", "dev_usb000"];
 		private static readonly string[] RequiredFirmwareDirectories = ["ps2emu", "ps1emu", "pspemu", "bdplayer", "data", "sys", "vsh"];
 
-		public readonly string Executable = Path.Combine(path, "rpcs3.exe");
-		public readonly string DevFlash = Path.Combine(path, "dev_flash");
-		public readonly string DevHdd = Path.Combine(path, "dev_hdd0");
-		public readonly string DevHome = Path.Combine(path, "dev_hdd0", "home");
-		public readonly string Captures = Path.Combine(path, "captures");
-		public readonly string GameIcons = Path.Combine(path, "Icons", "ProjectCatalyst");
-		public readonly string Games = Path.Combine(path, "games");
+		private readonly string _path;
+
+		public readonly string Executable;
+		public readonly string DevFlash;
+		public readonly string DevHdd;
+		public readonly string DevHome;
+		public readonly string Captures;
+		public readonly string GameIcons;
+		public readonly string Games;
+
+		public RPCS3(string executablePath)
+		{
+			_path = Path.GetDirectoryName(executablePath) ?? throw new ArgumentException("Executable path has no parent directory.", nameof(executablePath));
+
+			Executable = executablePath;
+			DevFlash = Path.Combine(_path, "dev_flash");
+			DevHdd = Path.Combine(_path, "dev_hdd0");
+			DevHome = Path.Combine(_path, "dev_hdd0", "home");
+			Captures = Path.Combine(_path, "captures");
+			GameIcons = Path.Combine(_path, "Icons", "ProjectCatalyst");
+			Games = Path.Combine(_path, "games");
+		}
 
 		public (bool, RPS3FailedReason) ValidateInstall()
 		{
@@ -37,10 +52,10 @@ namespace ProjectCatalyst.Wrappers
 				if (!File.Exists(Executable))
 					return (false, RPS3FailedReason.MissingExecutable);
 
-				if (RequiredFirstLaunchDirectories.Any(directory => !Directory.Exists(Path.Combine(path, directory))))
+				if (RequiredFirstLaunchDirectories.Any(directory => !Directory.Exists(Path.Combine(_path, directory))))
 					return (false, RPS3FailedReason.MissingInitDirectory);
 
-				if (RequiredDirectories.Any(directory => !Directory.Exists(Path.Combine(path, directory))))
+				if (RequiredDirectories.Any(directory => !Directory.Exists(Path.Combine(_path, directory))))
 					return (false, RPS3FailedReason.MissingFirstLaunchDirectories);
 
 				return (true, RPS3FailedReason.Valid);
@@ -87,10 +102,10 @@ namespace ProjectCatalyst.Wrappers
 					throw new InvalidOperationException("Missing firmware");
 
 				OverwriteWelcomeBox();
-				ExecutableRunner.KillClient("rpcs3.exe");
+				ExecutableRunner.KillClient(Path.GetFileNameWithoutExtension(Executable));
 
 				string user = userId.ToString().PadLeft(8, '0');
-				
+
 				await ExecutableRunner.RunExecutable(Executable, ["--no-gui", "--fullscreen", "--user-id", user, game.InstallLocation]);
 			}
 			catch (Exception ex)
@@ -107,7 +122,7 @@ namespace ProjectCatalyst.Wrappers
 					throw new InvalidOperationException("Missing firmware");
 
 				OverwriteWelcomeBox();
-				ExecutableRunner.KillClient("rpcs3.exe");
+				ExecutableRunner.KillClient(Path.GetFileNameWithoutExtension(Executable));
 				await ExecutableRunner.RunExecutable(Executable, ["--no-gui", "--fullscreen", game.InstallLocation]);
 			}
 			catch (Exception ex)
@@ -123,6 +138,7 @@ namespace ProjectCatalyst.Wrappers
 			try
 			{
 				if (IsFirmwareInstalled() && !forceInstall) return;
+				ExecutableRunner.KillClient(Path.GetFileNameWithoutExtension(Executable));
 				await ExecutableRunner.RunExecutable(Executable, ["--headless", "--installfw", firmware]);
 			}
 			catch (Exception ex)
@@ -206,7 +222,7 @@ namespace ProjectCatalyst.Wrappers
 		{
 			try
 			{
-				string settingsIni = Path.Combine(path, "GuiConfigs", "CurrentSettings.ini");
+				string settingsIni = Path.Combine(_path, "GuiConfigs", "CurrentSettings.ini");
 				if (!File.Exists(settingsIni))
 				{
 					File.WriteAllText(settingsIni, $"""

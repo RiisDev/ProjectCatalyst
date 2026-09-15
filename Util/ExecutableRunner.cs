@@ -5,9 +5,11 @@ namespace ProjectCatalyst.Util
 {
 	public static class ExecutableRunner
 	{
-		public static void KillClient(string fileName)
+		/// <summary>Kills any running process with this name - a Process.ProcessName value,
+		/// i.e. without a file extension (Process.GetProcessesByName never matches ".exe").</summary>
+		public static void KillClient(string processName)
 		{
-			try { Process.GetProcessesByName(fileName).ToList().ForEach(x => x.Kill(true)); }
+			try { Process.GetProcessesByName(processName).ToList().ForEach(x => x.Kill(true)); }
 			catch {/**/}
 		}
 
@@ -15,9 +17,6 @@ namespace ProjectCatalyst.Util
 		{
 			try
 			{
-				// RPCS3 Can only run once instance
-				if (Path.GetFileName(executable) == "rpcs3.exe") KillClient(Path.GetFileName(executable));
-
 				Process process = new()
 				{
 					StartInfo = new ProcessStartInfo

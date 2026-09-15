@@ -3,7 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
+using ProjectCatalyst.Views.Common;
 
 namespace ProjectCatalyst.Views.Consoles.Ps3
 {
@@ -19,7 +19,7 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 	/// view to route into, since gamepad input bypasses WPF's normal
 	/// keyboard focus/bubbling entirely.
 	/// </summary>
-	public partial class BackgroundVideoSelectorOverlay : UserControl
+	public partial class BackgroundVideoSelectorOverlay : OverlayControl, ICloseableOverlay
 	{
 		private readonly record struct VideoOption(string Key, string DisplayName, string FilePath);
 
@@ -27,18 +27,16 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 		private readonly List<Border> _rowBorders = [];
 		private readonly List<MediaElement> _thumbnails = [];
 		private int _index;
-		private TaskCompletionSource<string?>? _tcs;
+		private readonly OverlayResult<string?> _result = new();
 
 		private static readonly SolidColorBrush SelectedBorderBrush = new((Color)ColorConverter.ConvertFromString("#3ECBFF"));
 		private static readonly SolidColorBrush SelectedFillBrush = new(Color.FromArgb(40, 0x3E, 0xCB, 0xFF));
 
-		public bool IsOpen { get; private set; }
+		protected override UIElement BackdropElement => Backdrop;
+		protected override UIElement CardElement => Card;
+		protected override ScaleTransform CardScaleTransform => CardScale;
 
-		public BackgroundVideoSelectorOverlay()
-		{
-			InitializeComponent();
-			Visibility = Visibility.Collapsed;
-		}
+		public BackgroundVideoSelectorOverlay() => InitializeComponent();
 
 		/// <summary>
 		/// Opens the selector. variantFileNames maps a stable key (saved to
@@ -48,7 +46,7 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 		/// </summary>
 		public Task<string?> ShowAsync(IReadOnlyDictionary<string, string> variantFileNames, string videosFolder, string? currentKey)
 		{
-			_tcs = new TaskCompletionSource<string?>();
+			Task<string?> task = _result.Begin();
 
 			BuildRows(variantFileNames, videosFolder, currentKey);
 
@@ -57,7 +55,7 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 			AnimateIn();
 			FocusDefault();
 
-			return _tcs.Task;
+			return task;
 		}
 
 		private void BuildRows(IReadOnlyDictionary<string, string> variantFileNames, string videosFolder, string? currentKey)
@@ -166,6 +164,9 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 				_rowBorders[i].BorderBrush = selected ? SelectedBorderBrush : Brushes.Transparent;
 				_rowBorders[i].Background = selected ? SelectedFillBrush : Brushes.Transparent;
 			}
+
+			if (_index >= 0 && _index < _rowBorders.Count)
+				_rowBorders[_index].BringIntoView();
 		}
 
 		/// <summary>Browse up/down through the list - clamped, doesn't wrap.</summary>
@@ -201,47 +202,11 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 
 		private void Complete(string? key)
 		{
-			if (_tcs is null) return;
+			if (!_result.TryComplete(key)) return;
 
-			TaskCompletionSource<string?> tcs = _tcs;
-			_tcs = null;
 			IsOpen = false;
-
 			StopAllThumbnails();
 			AnimateOut();
-			tcs.TrySetResult(key);
-		}
-
-		public void FocusDefault()
-		{
-			Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() =>
-			{
-				Focus();
-				Keyboard.Focus(this);
-			}));
-		}
-
-		private void AnimateIn()
-		{
-			DoubleAnimation fade = new(0, 1, TimeSpan.FromMilliseconds(200));
-			Backdrop.BeginAnimation(OpacityProperty, fade);
-
-			DoubleAnimation cardFade = new(0, 1, TimeSpan.FromMilliseconds(220));
-			DoubleAnimation cardScale = new(0.94, 1.0, TimeSpan.FromMilliseconds(220))
-			{
-				EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-			};
-			Card.BeginAnimation(OpacityProperty, cardFade);
-			CardScale.BeginAnimation(ScaleTransform.ScaleXProperty, cardScale);
-			CardScale.BeginAnimation(ScaleTransform.ScaleYProperty, cardScale);
-		}
-
-		private void AnimateOut()
-		{
-			DoubleAnimation fadeOut = new(1, 0, TimeSpan.FromMilliseconds(160));
-			fadeOut.Completed += (_, _) => Visibility = Visibility.Collapsed;
-			Backdrop.BeginAnimation(OpacityProperty, fadeOut);
-			Card.BeginAnimation(OpacityProperty, fadeOut);
 		}
 
 		private void OnKeyDown(object sender, KeyEventArgs e)

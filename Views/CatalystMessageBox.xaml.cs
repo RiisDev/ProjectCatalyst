@@ -2,30 +2,26 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
 using ProjectCatalyst.Models;
+using ProjectCatalyst.Views.Common;
 
 namespace ProjectCatalyst.Views
 {
-	public partial class CatalystMessageBox
+	public partial class CatalystMessageBox : OverlayControl
 	{
 		private readonly List<(Button Button, CatalystMessageBoxResult Result)> _buttons = [];
-		private TaskCompletionSource<CatalystMessageBoxResult>? _tcs;
+		private readonly OverlayResult<CatalystMessageBoxResult> _result = new();
 		private int _selectedIndex;
 
-		public bool IsOpen { get; private set; }
+		protected override UIElement BackdropElement => Backdrop;
+		protected override UIElement CardElement => Card;
+		protected override ScaleTransform CardScaleTransform => CardScale;
 
-		public CatalystMessageBox()
-		{
-			InitializeComponent();
-			Visibility = Visibility.Collapsed;
-		}
+		public CatalystMessageBox() => InitializeComponent();
 
 		public Task<CatalystMessageBoxResult> ShowAsync(string title, string message, CatalystMessageBoxButtons buttons = CatalystMessageBoxButtons.Ok, CatalystMessageBoxIcon icon = CatalystMessageBoxIcon.Info)
 		{
-			_tcs?.TrySetResult(CatalystMessageBoxResult.None);
-
-			_tcs = new TaskCompletionSource<CatalystMessageBoxResult>();
+			Task<CatalystMessageBoxResult> task = _result.Begin(CatalystMessageBoxResult.None);
 
 			TitleTextBlock.Text = title;
 			MessageTextBlock.Text = message;
@@ -36,7 +32,7 @@ namespace ProjectCatalyst.Views
 			Visibility = Visibility.Visible;
 			AnimateIn();
 
-			return _tcs.Task;
+			return task;
 		}
 
 		private void ApplyIcon(CatalystMessageBoxIcon icon)
@@ -143,37 +139,10 @@ namespace ProjectCatalyst.Views
 
 		private void Complete(CatalystMessageBoxResult result)
 		{
-			if (_tcs is null) return;
+			if (!_result.TryComplete(result)) return;
 
-			TaskCompletionSource<CatalystMessageBoxResult>? tcs = _tcs;
-			_tcs = null;
 			IsOpen = false;
-
 			AnimateOut();
-			tcs.TrySetResult(result);
-		}
-
-		private void AnimateIn()
-		{
-			DoubleAnimation fade = new(0, 1, TimeSpan.FromMilliseconds(200));
-			Backdrop.BeginAnimation(OpacityProperty, fade);
-
-			DoubleAnimation cardFade = new(0, 1, TimeSpan.FromMilliseconds(220));
-			DoubleAnimation cardScale = new(0.94, 1.0, TimeSpan.FromMilliseconds(220))
-			{
-				EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-			};
-			Card.BeginAnimation(OpacityProperty, cardFade);
-			CardScale.BeginAnimation(ScaleTransform.ScaleXProperty, cardScale);
-			CardScale.BeginAnimation(ScaleTransform.ScaleYProperty, cardScale);
-		}
-
-		private void AnimateOut()
-		{
-			DoubleAnimation fadeOut = new(1, 0, TimeSpan.FromMilliseconds(160));
-			fadeOut.Completed += (_, _) => Visibility = Visibility.Collapsed;
-			Backdrop.BeginAnimation(OpacityProperty, fadeOut);
-			Card.BeginAnimation(OpacityProperty, fadeOut);
 		}
 
 		private void OnKeyDown(object sender, KeyEventArgs e)

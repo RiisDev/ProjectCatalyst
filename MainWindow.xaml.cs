@@ -59,34 +59,23 @@ namespace ProjectCatalyst
 			});
 		}
 
+		private static readonly Dictionary<SystemType, Func<EmulatorConfig, MainWindow, UserControl>> ConsoleViewFactories = new()
+		{
+			[SystemType.Ps3] = (config, main) => new Ps3ConsoleView(config, main)
+		};
+
 		private PlatformItem BuildPlatformItem(EmulatorConfig config)
 		{
-			(string displayName, string glyph, Color accentColor, Func<UserControl>? consoleViewFactory) = config.SystemType switch
-			{
-				SystemType.Ps3 => ("PlayStation 3", "PS3",
-					(Color)ColorConverter.ConvertFromString("#4A90D9"),
-					(Func<UserControl>?)(() => new Ps3ConsoleView(config, this))),
-
-				SystemType.Ps4 => ("PlayStation 4", "PS4",
-					(Color)ColorConverter.ConvertFromString("#00C2FF"), null),
-
-				SystemType.Xbox => ("Xbox", "XB",
-					(Color)ColorConverter.ConvertFromString("#5CB85C"), null),
-
-				SystemType.Wii => ("Wii", "Wii",
-					(Color)ColorConverter.ConvertFromString("#F5F5F5"), null),
-
-				_ => (config.SystemType.ToString(), config.SystemType.ToString(),
-					(Color)ColorConverter.ConvertFromString("#8792A6"), null)
-			};
+			SystemTypePresentation presentation = config.SystemType.GetPresentation();
+			Func<EmulatorConfig, MainWindow, UserControl>? factory = ConsoleViewFactories.GetValueOrDefault(config.SystemType);
 
 			return new PlatformItem
 			{
-				Name = displayName,
+				Name = presentation.DisplayName,
 				Subtitle = config.EmulatorName,
-				Glyph = glyph,
-				AccentColor = accentColor,
-				ConsoleViewFactory = consoleViewFactory,
+				Glyph = presentation.Glyph,
+				AccentColor = presentation.AccentColor,
+				ConsoleViewFactory = factory is null ? null : () => factory(config, this),
 				ExecutablePath = config.ExecutablePath,
 				WorkingDirectory = Path.GetDirectoryName(config.ExecutablePath)
 			};
@@ -206,6 +195,41 @@ namespace ProjectCatalyst
 			catch (Exception ex)
 			{
 				LogError($"Emulator setup failed: {ex}");
+			}
+		}
+
+		private async void OnClearConfigClick(object sender, RoutedEventArgs e)
+		{
+			CatalystMessageBoxResult first = await CatalystMessageBoxControl.ShowAsync(
+				"Clear Config?",
+				"This removes every emulator you've configured in Project Catalyst. Your emulator installs and games themselves aren't touched.",
+				CatalystMessageBoxButtons.YesNo,
+				CatalystMessageBoxIcon.Warning);
+
+			if (first != CatalystMessageBoxResult.Yes) return;
+
+			CatalystMessageBoxResult second = await CatalystMessageBoxControl.ShowAsync(
+				"Are You Absolutely Sure?",
+				"This cannot be undone. Every configured emulator will be removed from Project Catalyst.",
+				CatalystMessageBoxButtons.YesNo,
+				CatalystMessageBoxIcon.Error);
+
+			if (second != CatalystMessageBoxResult.Yes) return;
+
+			ClearConfig();
+		}
+
+		private void ClearConfig()
+		{
+			try
+			{
+				EmulatorConfigStore.Save([]);
+				RebuildPlatformTiles([]);
+				PlatformSelector.SelectedIndex = Platforms.Count > 0 ? 0 : -1;
+			}
+			catch (Exception ex)
+			{
+				LogError($"Failed to clear config: {ex}");
 			}
 		}
 

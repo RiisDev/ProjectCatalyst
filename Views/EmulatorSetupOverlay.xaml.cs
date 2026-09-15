@@ -3,32 +3,33 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
 using Microsoft.Win32;
 using ProjectCatalyst.Models;
+using ProjectCatalyst.Views.Common;
 
 namespace ProjectCatalyst.Views
 {
-	public partial class EmulatorSetupOverlay
+	public partial class EmulatorSetupOverlay : OverlayControl
 	{
-		private TaskCompletionSource<EmulatorConfig?>? _tcs;
+		private readonly OverlayResult<EmulatorConfig?> _result = new();
 		private EmulatorConfig? _editing;
 
 		private bool _usersDirectoryAutoFilled;
 		private bool _gamesDirectoryAutoFilled;
 
-		public bool IsOpen { get; private set; }
+		protected override UIElement BackdropElement => Backdrop;
+		protected override UIElement CardElement => Card;
+		protected override ScaleTransform CardScaleTransform => CardScale;
 
 		public EmulatorSetupOverlay()
 		{
 			InitializeComponent();
-			Visibility = Visibility.Collapsed;
 			SystemTypeCombo.ItemsSource = Enum.GetValues<SystemType>();
 		}
 
 		public Task<EmulatorConfig?> ShowAsync(EmulatorConfig? existing = null)
 		{
-			_tcs = new TaskCompletionSource<EmulatorConfig?>();
+			Task<EmulatorConfig?> task = _result.Begin();
 			_editing = existing;
 			_usersDirectoryAutoFilled = false;
 			_gamesDirectoryAutoFilled = false;
@@ -56,7 +57,7 @@ namespace ProjectCatalyst.Views
 			Visibility = Visibility.Visible;
 			AnimateIn();
 
-			return _tcs.Task;
+			return task;
 		}
 
 		private void RefreshEmulatorOptions(SystemType systemType)
@@ -78,7 +79,7 @@ namespace ProjectCatalyst.Views
 			OpenFileDialog dialog = new()
 			{
 				Title = "Select Emulator Executable",
-				Filter = "Executable files (*.exe)|*.exe|All files (*.*)|*.*"
+				Filter = "Executable files (*.exe;*.AppImage)|*.exe;*.AppImage|All files (*.*)|*.*"
 			};
 
 			if (dialog.ShowDialog() == true)
@@ -148,13 +149,13 @@ namespace ProjectCatalyst.Views
 		{
 			if (SystemTypeCombo.SelectedItem is not SystemType systemType || EmulatorCombo.SelectedItem is not EmulatorDefinition definition)
 			{
-				ShowValidationMessage("Choose a system and an emulator.");
+				ShowValidationMessage(ValidationText, "Choose a system and an emulator.");
 				return;
 			}
 
 			if (string.IsNullOrWhiteSpace(ExecutablePathBox.Text) || !File.Exists(ExecutablePathBox.Text))
 			{
-				ShowValidationMessage("Choose a valid emulator executable.");
+				ShowValidationMessage(ValidationText, "Choose a valid emulator executable.");
 				return;
 			}
 
@@ -173,45 +174,12 @@ namespace ProjectCatalyst.Views
 
 		private void OnCancelClick(object sender, RoutedEventArgs e) => Complete(null);
 
-		private void ShowValidationMessage(string message)
-		{
-			ValidationText.Text = message;
-			ValidationText.Visibility = Visibility.Visible;
-		}
-
 		private void Complete(EmulatorConfig? result)
 		{
-			if (_tcs is null) return;
+			if (!_result.TryComplete(result)) return;
 
-			TaskCompletionSource<EmulatorConfig?> tcs = _tcs;
-			_tcs = null;
 			IsOpen = false;
-
 			AnimateOut();
-			tcs.TrySetResult(result);
-		}
-
-		private void AnimateIn()
-		{
-			DoubleAnimation fade = new(0, 1, TimeSpan.FromMilliseconds(200));
-			Backdrop.BeginAnimation(OpacityProperty, fade);
-
-			DoubleAnimation cardFade = new(0, 1, TimeSpan.FromMilliseconds(220));
-			DoubleAnimation cardScale = new(0.94, 1.0, TimeSpan.FromMilliseconds(220))
-			{
-				EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-			};
-			Card.BeginAnimation(OpacityProperty, cardFade);
-			CardScale.BeginAnimation(ScaleTransform.ScaleXProperty, cardScale);
-			CardScale.BeginAnimation(ScaleTransform.ScaleYProperty, cardScale);
-		}
-
-		private void AnimateOut()
-		{
-			DoubleAnimation fadeOut = new(1, 0, TimeSpan.FromMilliseconds(160));
-			fadeOut.Completed += (_, _) => Visibility = Visibility.Collapsed;
-			Backdrop.BeginAnimation(OpacityProperty, fadeOut);
-			Card.BeginAnimation(OpacityProperty, fadeOut);
 		}
 
 		private void OnKeyDown(object sender, KeyEventArgs e)

@@ -1,41 +1,30 @@
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media.Animation;
+using System.Windows.Media;
+using ProjectCatalyst.Views.Common;
 
 namespace ProjectCatalyst.Views
 {
-	public partial class DownloadOverlay
+	public partial class DownloadOverlay : OverlayControl
 	{
-		public DownloadOverlay()
-		{
-			InitializeComponent();
-			Visibility = Visibility.Collapsed;
-		}
+		protected override UIElement BackdropElement => Backdrop;
+		protected override UIElement CardElement => Card;
+		protected override ScaleTransform CardScaleTransform => CardScale;
+
+		public DownloadOverlay() => InitializeComponent();
 
 		public void Open(string title = "Installing")
 		{
 			TitleTextBlock.Text = title;
+			IsOpen = true;
 			Visibility = Visibility.Visible;
-
-			DoubleAnimation fade = new(0, 1, TimeSpan.FromMilliseconds(200));
-			Backdrop.BeginAnimation(OpacityProperty, fade);
-
-			DoubleAnimation cardFade = new(0, 1, TimeSpan.FromMilliseconds(220));
-			DoubleAnimation cardScale = new(0.94, 1.0, TimeSpan.FromMilliseconds(220))
-			{
-				EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-			};
-			Card.BeginAnimation(OpacityProperty, cardFade);
-			CardScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, cardScale);
-			CardScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, cardScale);
+			AnimateIn();
 		}
 
 		public void Close()
 		{
-			DoubleAnimation fadeOut = new(1, 0, TimeSpan.FromMilliseconds(180));
-			fadeOut.Completed += (_, _) => Visibility = Visibility.Collapsed;
-			Backdrop.BeginAnimation(OpacityProperty, fadeOut);
-			Card.BeginAnimation(OpacityProperty, fadeOut);
+			IsOpen = false;
+			AnimateOut(fadeMs: 180);
 		}
 
 		public void UpdateProgress(string fileName, double progress, int currentStep = 1, int totalSteps = 1, string? status = null)

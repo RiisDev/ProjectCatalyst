@@ -1,8 +1,9 @@
-<UserControl x:Class="ProjectCatalyst.Views.Consoles.Ps3.BackgroundVideoSelectorOverlay"
+<common:OverlayControl x:Class="ProjectCatalyst.Views.Consoles.Ps3.BackgroundVideoSelectorOverlay"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:common="clr-namespace:ProjectCatalyst.Views.Common"
              mc:Ignorable="d"
              d:DesignHeight="1080" d:DesignWidth="1920"
              Focusable="True"
@@ -39,7 +40,7 @@
                      code-behind, since each needs its own live, looping
                      MediaElement preview - not something a plain
                      DataTemplate binding handles cleanly. -->
-                <ScrollViewer MaxHeight="560" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer x:Name="OptionsScroll" MaxHeight="560" VerticalScrollBarVisibility="Hidden">
                     <StackPanel x:Name="OptionsPanel" />
                 </ScrollViewer>
 
@@ -50,4 +51,4 @@
             </StackPanel>
         </Border>
     </Grid>
-</UserControl>
+</common:OverlayControl>
