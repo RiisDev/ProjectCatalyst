@@ -126,7 +126,15 @@ namespace ProjectCatalyst.Views
 			if (EmulatorCombo.SelectedItem is not EmulatorDefinition definition || definition.Detector is null) return;
 
 			if (string.Equals(Path.GetExtension(path), ".AppImage", StringComparison.OrdinalIgnoreCase))
+			{
 				await ExecutableRunner.EnsureAppImageDataLink();
+				await Task.Delay(250);
+				if (Directory.Exists(Path.Combine(BaseDirectory, "Resources", "linux", "rpcs3")))
+				{
+					UsersDirectoryBox.Text = Path.Combine(BaseDirectory, "Resources", "linux", "rpcs3", "dev_hdd0", "home");
+					GamesDirectoryBox.Text = Path.Combine(BaseDirectory, "Resources", "linux", "rpcs3", "games");
+				}
+			}
 
 			// Only fill fields the user hasn't manually set themselves - either
 			// still blank, or previously auto-filled and not edited since.
