@@ -46,6 +46,17 @@ namespace ProjectCatalyst.Wrappers
 			Captures = Path.Combine(_path, "captures");
 			GameIcons = Path.Combine(_path, "Icons", "ProjectCatalyst");
 			Games = Path.Combine(_path, "games");
+
+			LogInfo("RPCS SETUP:");
+			Log(_path);
+			Log(Executable);
+			Log(DevFlash);
+			Log(DevHdd);
+			Log(DevHome);
+			Log(Captures);
+			Log(GameIcons);
+			Log(Games);
+			Log(new string('─', 10));
 		}
 
 		public (bool, RPS3FailedReason) ValidateInstall()

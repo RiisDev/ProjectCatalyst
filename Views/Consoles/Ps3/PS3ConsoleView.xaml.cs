@@ -581,6 +581,9 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 		public bool TryHandleBack()
 		{
 			ICloseableOverlay? openOverlay = Array.Find(_backCloseableOverlays, o => o.IsOpen);
+
+			if (CreateUserOverlay.IsOpen) return true;
+
 			if (openOverlay is not null)
 			{
 				openOverlay.Close();

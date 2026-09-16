@@ -6,7 +6,7 @@ using ProjectCatalyst.Views.Common;
 
 namespace ProjectCatalyst.Views.Consoles.Ps3
 {
-	public partial class CreateUserOverlay : OverlayControl, ICloseableOverlay
+	public partial class CreateUserOverlay : ICloseableOverlay
 	{
 		private readonly OverlayResult<bool?> _result = new();
 
@@ -25,6 +25,7 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 			IsOpen = true;
 			Visibility = Visibility.Visible;
 			AnimateIn();
+			FocusInput(UpdateUsernameBox);
 
 			return task;
 		}

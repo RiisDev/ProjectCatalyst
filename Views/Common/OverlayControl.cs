@@ -68,15 +68,21 @@ namespace ProjectCatalyst.Views.Common
 			target.Text = message;
 			target.Visibility = Visibility.Visible;
 		}
+
+		protected static void FocusInput(UIElement element)
+		{
+			element.Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
+			{
+				element.Focus();
+				Keyboard.Focus(element);
+			}));
+		}
 	}
 
-	/// <summary>Tracks the single pending TaskCompletionSource behind an overlay's ShowAsync, so each
-	/// result-returning overlay doesn't hand-roll the same "abandon previous, complete once" bookkeeping.</summary>
 	public sealed class OverlayResult<T>
 	{
 		private TaskCompletionSource<T>? _tcs;
 
-		/// <summary>Starts a new pending result, resolving any still-unresolved previous one with abandonedResult first.</summary>
 		public Task<T> Begin(T abandonedResult = default!)
 		{
 			_tcs?.TrySetResult(abandonedResult);
@@ -84,7 +90,6 @@ namespace ProjectCatalyst.Views.Common
 			return _tcs.Task;
 		}
 
-		/// <summary>Resolves the pending result, if any. Returns false if nothing was pending.</summary>
 		public bool TryComplete(T result)
 		{
 			if (_tcs is null) return false;

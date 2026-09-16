@@ -57,6 +57,7 @@ namespace ProjectCatalyst.Views
 			IsOpen = true;
 			Visibility = Visibility.Visible;
 			AnimateIn();
+			FocusInput(ExecutablePathBox);
 
 			return task;
 		}

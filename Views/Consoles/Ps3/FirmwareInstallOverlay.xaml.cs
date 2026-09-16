@@ -27,6 +27,7 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 			IsOpen = true;
 			Visibility = Visibility.Visible;
 			AnimateIn();
+			FocusInput(UpdateFilePathBox);
 
 			return task;
 		}
