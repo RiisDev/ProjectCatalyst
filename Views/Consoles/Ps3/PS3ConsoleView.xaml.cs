@@ -453,6 +453,7 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 					return;
 				}
 
+				Log("Checking firmware");
 				if (!RPCS3.IsFirmwareInstalled())
 				{
 					LogError("Missing required firmware");
@@ -461,8 +462,9 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 						icon: CatalystMessageBoxIcon.Error);
 					return;
 				}
-
-				_ = LaunchGameAndWaitAsync(currentItem);
+				
+				Log("Runing game");
+				await LaunchGameAndWaitAsync(currentItem);
 			}
 			catch (Exception ex)
 			{

@@ -61,13 +61,14 @@ namespace ProjectCatalyst.Wrappers
 		{
 			try
 			{
-
+				Log("Checking for executable");
 				if (!File.Exists(Executable))
 				{
 					LogError($"Executable not found at: {Executable}");
 					return (false, RPS3FailedReason.MissingExecutable);
 				}
-
+				
+				Log("Checking for required directories");
 				string[] missingDirectories = RequiredDirectories.Where(directory => !Directory.Exists(Path.Combine(_path, directory))).ToArray();
 				if (missingDirectories.Length > 0)
 				{
@@ -75,6 +76,7 @@ namespace ProjectCatalyst.Wrappers
 					return (false, RPS3FailedReason.MissingFirstLaunchDirectories);
 				}
 
+				Log("Valid Launch");
 				return (true, RPS3FailedReason.Valid);
 			}
 			catch (Exception ex)
