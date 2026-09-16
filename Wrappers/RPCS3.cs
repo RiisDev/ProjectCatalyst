@@ -17,7 +17,7 @@ namespace ProjectCatalyst.Wrappers
 			MissingFirstLaunchDirectories = 3
 		}
 
-		private static readonly string[] RequiredFirstLaunchDirectories = ["config", "GuiConfigs", "Icons", "qt6"];
+		private static readonly string[] RequiredFirstLaunchDirectories = ["config", "GuiConfigs", "Icons"];
 		private static readonly string[] RequiredDirectories = ["dev_bdvd", "dev_flash", "dev_flash2", "dev_flash3", "dev_hdd0", "dev_hdd1", "dev_usb000"];
 		private static readonly string[] RequiredFirmwareDirectories = ["ps2emu", "ps1emu", "pspemu", "bdplayer", "data", "sys", "vsh"];
 
