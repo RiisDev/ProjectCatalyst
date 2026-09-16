@@ -10,6 +10,7 @@ namespace ProjectCatalyst.Util
 
 		public static void KillClient(string processName)
 		{
+			Log($"Killing: {processName}");
 			try { Process.GetProcessesByName(processName).ToList().ForEach(x => x.Kill(true)); }
 			catch {/**/}
 		}
@@ -91,6 +92,7 @@ namespace ProjectCatalyst.Util
 
 		public static async Task RunExecutable(string executable, string[] arguments)
 		{
+			Log($"Running {executable} with {string.Join(',', arguments)}");
 			try
 			{
 				string fileName;
@@ -128,15 +130,7 @@ namespace ProjectCatalyst.Util
 				Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
 				Task<string> stderrTask = process.StandardError.ReadToEndAsync();
 
-				Task timeoutTask = Task.Delay(TimeSpan.FromHours(1));
-				Task finishedTask = await Task.WhenAny(WaitForExitBestEffort(process, executable), timeoutTask);
-
-				if (finishedTask == timeoutTask)
-				{
-					LogError($"{executable} exceeded 1 hour, killing process...");
-					try { process.Kill(entireProcessTree: true); }
-					catch (Exception ex) { LogError($"Failed to kill {executable}: {ex}"); }
-				}
+				await WaitForExitBestEffort(process, executable);
 
 				string stdout = await stdoutTask;
 				string stderr = await stderrTask;

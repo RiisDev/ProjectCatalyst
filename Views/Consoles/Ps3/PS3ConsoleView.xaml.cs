@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -378,24 +379,27 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 		{
 			Log("Activating selection");
 			if (ScreenshotViewer.IsOpen) return;
+
+			Log("Not ScreenshotViewer");
 			if (_mainWindow.CatalystMessageBoxControl.IsOpen) return;
 
-			if (BackgroundVideoSelector.IsOpen)
-			{
-				BackgroundVideoSelector.ActivateSelected();
-				return;
-			}
+			Log("Not CatalystMessageBoxControl");
+			if (BackgroundVideoSelector.IsOpen) {BackgroundVideoSelector.ActivateSelected(); return; }
 
+			Log("Not BackgroundVideoSelector");
 			if (VolumeAdjuster.IsOpen)
 			{
 				VolumeAdjuster.ConfirmSelected();
 				return;
 			}
 
+			Log("Not VolumeAdjuster");
 			if (CurrentItems.Count == 0) return;
 
 			XmbItem? currentItem = CurrentItems.FirstOrDefault(x => x.IsSelected);
 			if (currentItem is null) return;
+
+			Log($"Category: {(XmbCategoryState)_categoryIndex}");
 
 			switch ((XmbCategoryState)_categoryIndex)
 			{
@@ -420,6 +424,7 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 
 		private async Task ActivateUserAsync(XmbItem currentItem)
 		{
+			Log($"Selected Item: {JsonSerializer.Serialize(currentItem)}");
 			if (currentItem.Subtitle == "SYS") await CreateUserOverlay.ShowAsync();
 			else if (!int.TryParse(currentItem.Subtitle, out _currentSelectedUserId))
 			{
@@ -436,6 +441,7 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 
 		private async Task ActivateGameAsync(XmbItem currentItem)
 		{
+			Log($"Selected Item: {JsonSerializer.Serialize(currentItem)}");
 			try
 			{
 				(bool valid, RPCS3.RPS3FailedReason reason) = RPCS3.ValidateInstall();
@@ -466,9 +472,10 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 
 		private async Task LaunchGameAndWaitAsync(XmbItem currentItem)
 		{
-			Task launchTask = RPCS3.LaunchGameAsUser(
-				RPCS3.GetAllGames().First(x => x.MetData.TitleId == currentItem.Subtitle),
-				_currentSelectedUserId);
+			RPCS3.Ps3Game game = RPCS3.GetAllGames().First(x => x.MetData.TitleId == currentItem.Subtitle);
+			Log($"USER_{_currentSelectedUserId} Launching Game: {JsonSerializer.Serialize(game)}");
+
+			Task launchTask = RPCS3.LaunchGameAsUser(game, _currentSelectedUserId);
 
 			await Task.Delay(2000);
 
@@ -555,10 +562,14 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 					if (RPCS3.IsFirmwareInstalled())
 					{
 						confirm = await _mainWindow.CatalystMessageBoxControl.ShowAsync("Install Firmware", $"RPCS3 has detected an existing firmware, do you wish to proceed?", icon: CatalystMessageBoxIcon.Question, buttons: CatalystMessageBoxButtons.YesNo);
-
-						if (confirm == CatalystMessageBoxResult.Yes)
-							await RPCS3.InstallFirmwareAsync(firmwareLocation, true);
+						if (confirm != CatalystMessageBoxResult.Yes)
+						{
+							DownloadOverlay.Close();
+							break;
+						}
 					}
+
+					await RPCS3.InstallFirmwareAsync(firmwareLocation, forceInstall: true);
 
 					DownloadOverlay.UpdateProgress(Path.GetFileName(firmwareLocation), 1.0, status: "Complete");
 					await Task.Delay(500);

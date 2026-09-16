@@ -63,10 +63,17 @@ namespace ProjectCatalyst.Wrappers
 			{
 
 				if (!File.Exists(Executable))
+				{
+					LogError($"Executable not found at: {Executable}");
 					return (false, RPS3FailedReason.MissingExecutable);
+				}
 
-				if (RequiredDirectories.Any(directory => !Directory.Exists(Path.Combine(_path, directory))))
+				string[] missingDirectories = RequiredDirectories.Where(directory => !Directory.Exists(Path.Combine(_path, directory))).ToArray();
+				if (missingDirectories.Length > 0)
+				{
+					LogError($"Missing directories under {_path}: {string.Join(", ", missingDirectories)}");
 					return (false, RPS3FailedReason.MissingFirstLaunchDirectories);
+				}
 
 				return (true, RPS3FailedReason.Valid);
 			}
@@ -145,6 +152,7 @@ namespace ProjectCatalyst.Wrappers
 
 		public async Task InstallFirmwareAsync(string firmware, bool forceInstall = false)
 		{
+			Log("Installing firmware...");
 			try
 			{
 				if (IsFirmwareInstalled() && !forceInstall) return;
