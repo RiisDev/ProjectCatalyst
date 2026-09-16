@@ -463,7 +463,7 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 					return;
 				}
 				
-				Log("Runing game");
+				Log("Running game");
 				await LaunchGameAndWaitAsync(currentItem);
 			}
 			catch (Exception ex)
