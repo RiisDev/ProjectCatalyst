@@ -60,7 +60,7 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 			_mainWindow = main;
 
 			Log($"Starting RPCS3 wrapper with: {_emulatorConfig.ExecutablePath}");
-			RPCS3 = new RPCS3(_emulatorConfig.ExecutablePath);
+			RPCS3 = new RPCS3(_emulatorConfig.ExecutablePath, _emulatorConfig.GamesDirectory);
 
 			Log("Building interface");
 			InitializeComponent();

@@ -31,7 +31,7 @@ namespace ProjectCatalyst.Wrappers
 
 		private const string ProcessName = "rpcs3";
 
-		public RPCS3(string executablePath)
+		public RPCS3(string executablePath, string gamesDir)
 		{
 			_path = string.Equals(Path.GetExtension(executablePath), ".AppImage", StringComparison.OrdinalIgnoreCase)
 				? Path.Combine(BaseDirectory, "Resources", "linux", "rpcs3")
@@ -43,7 +43,7 @@ namespace ProjectCatalyst.Wrappers
 			DevHome = Path.Combine(_path, "dev_hdd0", "home");
 			Captures = Path.Combine(_path, "captures");
 			GameIcons = Path.Combine(_path, "Icons", "ProjectCatalyst");
-			Games = Path.Combine(_path, "games");
+			Games = gamesDir;
 
 			LogInfo("RPCS SETUP:");
 			Log(_path);
