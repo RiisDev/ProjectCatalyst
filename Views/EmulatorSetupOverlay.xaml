@@ -37,7 +37,6 @@
 
                 <TextBlock Text="SYSTEM" Style="{StaticResource HintText}" Margin="0,0,0,8" />
                 <ComboBox x:Name="SystemTypeCombo"
-                          Background="Black"
                           Style="{StaticResource CatalystComboBox}"
                           SelectionChanged="OnSystemTypeChanged"
                           Margin="0,0,0,18" />
