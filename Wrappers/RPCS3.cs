@@ -1,6 +1,5 @@
 ﻿using ProjectCatalyst.Util;
 using System.IO;
-using System.Net.NetworkInformation;
 
 namespace ProjectCatalyst.Wrappers
 {
@@ -13,11 +12,10 @@ namespace ProjectCatalyst.Wrappers
 		{
 			Valid = 0,
 			MissingExecutable = 1,
-			MissingInitDirectory = 2,
+			MissingInitDirectory = 2, // Old logic, keep for backwards compat
 			MissingFirstLaunchDirectories = 3
 		}
 
-		private static readonly string[] RequiredFirstLaunchDirectories = ["config", "GuiConfigs", "Icons"];
 		private static readonly string[] RequiredDirectories = ["dev_bdvd", "dev_flash", "dev_flash2", "dev_flash3", "dev_hdd0", "dev_hdd1", "dev_usb000"];
 		private static readonly string[] RequiredFirmwareDirectories = ["ps2emu", "ps1emu", "pspemu", "bdplayer", "data", "sys", "vsh"];
 
@@ -66,9 +64,6 @@ namespace ProjectCatalyst.Wrappers
 
 				if (!File.Exists(Executable))
 					return (false, RPS3FailedReason.MissingExecutable);
-
-				if (RequiredFirstLaunchDirectories.Any(directory => !Directory.Exists(Path.Combine(_path, directory))))
-					return (false, RPS3FailedReason.MissingInitDirectory);
 
 				if (RequiredDirectories.Any(directory => !Directory.Exists(Path.Combine(_path, directory))))
 					return (false, RPS3FailedReason.MissingFirstLaunchDirectories);
