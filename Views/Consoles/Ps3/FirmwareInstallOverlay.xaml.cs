@@ -55,7 +55,9 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 			}
 		}
 
-		private void OnSaveClick(object sender, RoutedEventArgs e)
+		private void OnSaveClick(object sender, RoutedEventArgs e) => TrySave();
+
+		private void TrySave()
 		{
 			if (string.IsNullOrWhiteSpace(UpdateFilePathBox.Text) || !File.Exists(UpdateFilePathBox.Text))
 			{
@@ -80,10 +82,18 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 
 		private void OnKeyDown(object sender, KeyEventArgs e)
 		{
-			if (e.Key != Key.Escape) return;
+			switch (e.Key)
+			{
+				case Key.Escape:
+					Complete(null);
+					e.Handled = true;
+					break;
 
-			Complete(null);
-			e.Handled = true;
+				case Key.Enter:
+					TrySave();
+					e.Handled = true;
+					break;
+			}
 		}
 	}
 }

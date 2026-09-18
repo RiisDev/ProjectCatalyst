@@ -39,7 +39,9 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 			}
 		}
 
-		private void OnCreateUserClick(object sender, RoutedEventArgs e)
+		private void OnCreateUserClick(object sender, RoutedEventArgs e) => TryCreateUser();
+
+		private void TryCreateUser()
 		{
 			string username = UpdateUsernameBox.Text;
 			if (string.IsNullOrWhiteSpace(username) || username.Length < 3 || username.Length > 16)
@@ -72,10 +74,18 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 
 		private void OnKeyDown(object sender, KeyEventArgs e)
 		{
-			if (e.Key != Key.Escape) return;
+			switch (e.Key)
+			{
+				case Key.Escape:
+					Complete(null);
+					e.Handled = true;
+					break;
 
-			Complete(null);
-			e.Handled = true;
+				case Key.Enter:
+					TryCreateUser();
+					e.Handled = true;
+					break;
+			}
 		}
 	}
 }

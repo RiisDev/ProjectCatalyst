@@ -137,7 +137,7 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 			return GetResource("UserIcons", userPictureIndex.ToString().PadLeft(3, '0') + ".png");
 		}
 
-		private List<XmbCategory> BuildCategories()
+		private List<XmbCategory>   BuildCategories()
 		{
 			try
 			{
@@ -176,7 +176,7 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 								CoverImagePath = game.IconLocation,
 								CoverAccentColor = Color.FromRgb(0x2E, 0x7D, 0x5A),
 								IsGameItem = true
-							});
+							}); 
 						}
 
 						foreach (string imagePath in RPCS3.GetScreenshots())
@@ -217,7 +217,7 @@ namespace ProjectCatalyst.Views.Consoles.Ps3
 								CoverImagePath = GetResource("Icons", "database.png")
 							}
 						]);
-
+						
 						return [userCategory, gamesCategory, screenshotsCategory, settingsCategory];
 				}
 			}

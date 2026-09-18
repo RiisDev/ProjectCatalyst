@@ -7,7 +7,6 @@ namespace ProjectCatalyst.Models
 		public static readonly IReadOnlyList<EmulatorDefinition> All =
 		[
 			new() { Name = "RPCS3", SystemType = SystemType.Ps3, Detector = new Rpcs3Detector() },
-			new() { Name = "Nucleus", SystemType = SystemType.Ps3 },
 
 			new() { Name = "Xenia", SystemType = SystemType.Xbox, Detector = new XeniaDetector() },
 			new() { Name = "Cxbx-Reloaded", SystemType = SystemType.Xbox },

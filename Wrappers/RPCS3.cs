@@ -218,20 +218,11 @@ namespace ProjectCatalyst.Wrappers
 
 		public void CreateUser(string username)
 		{
-			int userIndex = Directory.GetDirectories(DevHome, "*").Length + 1;
-			string user = userIndex.ToString().PadLeft(8, '0');
-			
-			if (Directory.Exists(Path.Combine(DevHome, user)))
-			{
-				for (int fileIndex = 1; fileIndex <= userIndex; fileIndex++)
-				{
-					user = fileIndex.ToString().PadLeft(8, '0');
-					if (Directory.Exists(user)) continue;
-					break;
-				}
-			}
+			int userIndex = 1;
+			while (Directory.Exists(Path.Combine(DevHome, userIndex.ToString().PadLeft(8, '0'))))
+				userIndex++;
 
-			string newUserDirectory = Path.Combine(DevHome, user);
+			string newUserDirectory = Path.Combine(DevHome, userIndex.ToString().PadLeft(8, '0'));
 			Directory.CreateDirectory(Path.Combine(newUserDirectory, "exdata"));
 			Directory.CreateDirectory(Path.Combine(newUserDirectory, "savedata"));
 			Directory.CreateDirectory(Path.Combine(newUserDirectory, "trophy"));

@@ -17,7 +17,9 @@ namespace ProjectCatalyst
 		// ReSharper disable twice ExplicitCallerInfoArgument
 		protected override void OnStartup(StartupEventArgs e)
 		{
+#if DEBUG
 			AllocConsole();
+#endif
 
 			PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Critical;
 			
@@ -43,7 +45,14 @@ namespace ProjectCatalyst
 
 		private static readonly Lock LogLock = new();
 		private static readonly string LogPath = Path.Combine(BaseDirectory, "Resources", "log.txt");
-		private static readonly StreamWriter Writer = new(new FileStream(LogPath, FileMode.Append, FileAccess.Write, FileShare.Read), Encoding.UTF8) { AutoFlush = true };
+		private static readonly StreamWriter Writer = CreateWriter();
+
+		private static StreamWriter CreateWriter()
+		{
+			bool isFromToday = File.Exists(LogPath) && File.GetLastWriteTime(LogPath).Date == DateTime.Now.Date;
+			FileMode mode = isFromToday ? FileMode.Append : FileMode.Create;
+			return new StreamWriter(new FileStream(LogPath, mode, FileAccess.Write, FileShare.Read), Encoding.UTF8) { AutoFlush = true };
+		}
 
 		private static void Log(string message, string type, string caller, string filePath)
 		{
